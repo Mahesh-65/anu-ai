@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anu AI - Enterprise RAG & Chatbot Dashboard</title>
+    <!-- Modern Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Main Style -->
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Chatbot Style -->
+    <link rel="stylesheet" href="css/chatbot.css">
+</head>
+<body>
+    <div class="stars-bg"></div>
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+
+    <div class="app-container">
+        <!-- Navigation Header -->
+        <header class="app-header glass">
+            <div class="brand">
+                <div class="brand-icon">
+                    <i class="fa-solid fa-brain-circuit glow-text"></i>
+                </div>
+                <div class="brand-text">
+                    <h1>Anu<span class="gradient-text">.AI</span></h1>
+                    <p>Enterprise RAG Pipeline</p>
+                </div>
+            </div>
+            
+            <div class="header-actions">
+                <div class="status-pill offline" id="api-status">
+                    <span class="pulse-dot"></span>
+                    <span class="status-label">Checking System Connection...</span>
+                </div>
+                <button class="btn btn-secondary" id="btn-reset-db">
+                    <i class="fa-solid fa-trash-can-arrow-up"></i> Reset Database
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Layout Grid -->
+        <main class="dashboard-grid">
+            <!-- Left Panel: Analytics & Stats -->
+            <section class="grid-card glass fade-in" id="analytics-section">
+                <div class="card-header">
+                    <div class="header-icon"><i class="fa-solid fa-chart-simple"></i></div>
+                    <h3>System Analytics</h3>
+                </div>
+                
+                <div class="stats-container">
+                    <div class="stat-card glass-inner">
+                        <p class="stat-label">Indexed Documents</p>
+                        <h2 class="stat-value" id="stat-docs-count">0</h2>
+                        <div class="stat-indicator">
+                            <span class="text-success"><i class="fa-solid fa-file-invoice"></i> Active</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card glass-inner">
+                        <p class="stat-label">Total Knowledge Chunks</p>
+                        <h2 class="stat-value" id="stat-chunks-count">0</h2>
+                        <div class="stat-indicator">
+                            <span class="text-info"><i class="fa-solid fa-puzzle-piece"></i> Vectorized</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card glass-inner">
+                        <p class="stat-label">Vector Storage Space</p>
+                        <h2 class="stat-value" id="stat-size">0 KB</h2>
+                        <div class="stat-indicator">
+                            <span class="text-warning"><i class="fa-solid fa-database"></i> ChromaDB</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card glass-inner">
+                        <p class="stat-label">Avg Query Latency</p>
+                        <h2 class="stat-value" id="stat-latency">-- ms</h2>
+                        <div class="stat-indicator">
+                            <span class="text-purple"><i class="fa-solid fa-bolt"></i> Ultra Fast</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="model-info-panel glass-inner">
+                    <h4>Active Engine Configuration</h4>
+                    <div class="info-row">
+                        <span class="info-key"><i class="fa-solid fa-microchip"></i> LLM Model</span>
+                        <span class="info-val" id="model-llm">Google Gemini 1.5 Flash</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-key"><i class="fa-solid fa-fingerprint"></i> Embedding</span>
+                        <span class="info-val" id="model-embedding">models/text-embedding-004</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-key"><i class="fa-solid fa-server"></i> Vector Store</span>
+                        <span class="info-val">ChromaDB Local Persistent</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Middle Panel: Ingestion Hub -->
+            <section class="grid-card glass fade-in" id="ingestion-section">
+                <div class="card-header">
+                    <div class="header-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+                    <h3>Document Ingestion Hub</h3>
+                </div>
+
+                <div class="ingest-box" id="drop-zone">
+                    <input type="file" id="file-input" multiple accept=".pdf,.txt,.md" style="display: none;">
+                    <div class="upload-icon">
+                        <i class="fa-solid fa-file-pdf pdf-glow"></i>
+                        <i class="fa-solid fa-file-lines txt-glow"></i>
+                        <i class="fa-solid fa-cloud-arrow-up main-glow"></i>
+                    </div>
+                    <h4>Drag & Drop Files Here</h4>
+                    <p class="upload-formats">Supports PDF, TXT, and Markdown files up to 25MB</p>
+                    <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">
+                        Browse Files
+                    </button>
+                </div>
+
+                <!-- Active Upload Progress Queue -->
+                <div class="progress-queue" id="progress-queue" style="display: none;">
+                    <h4>Ingestion Queue</h4>
+                    <div id="queue-items"></div>
+                </div>
+
+                <!-- Live Pipeline Console Logging -->
+                <div class="live-console">
+                    <div class="console-header">
+                        <span><i class="fa-solid fa-terminal"></i> Ingestion Log Stream</span>
+                        <button class="btn-clear-console" id="btn-clear-logs" title="Clear Console">
+                            <i class="fa-solid fa-circle-xmark"></i>
+                        </button>
+                    </div>
+                    <div class="console-body" id="console-logs">
+                        <div class="log-line system">[SYSTEM] System operational. Ready for document ingestion...</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Bottom Panel: Ingested Document Library -->
+            <section class="grid-card glass fade-in span-all" id="library-section">
+                <div class="card-header">
+                    <div class="header-icon"><i class="fa-solid fa-folder-open"></i></div>
+                    <h3>Knowledge Base Library</h3>
+                </div>
+
+                <div class="table-container">
+                    <table class="library-table" id="library-table">
+                        <thead>
+                            <tr>
+                                <th><i class="fa-solid fa-file"></i> Document Name</th>
+                                <th><i class="fa-solid fa-puzzle-piece"></i> Chunks Count</th>
+                                <th><i class="fa-solid fa-text-height"></i> Size (Characters)</th>
+                                <th><i class="fa-solid fa-fingerprint"></i> Doc Hash ID</th>
+                                <th><i class="fa-solid fa-gears"></i> Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="library-tbody">
+                            <tr class="empty-row">
+                                <td colspan="5">
+                                    <div class="empty-state">
+                                        <i class="fa-solid fa-box-open"></i>
+                                        <p>No documents found in the database. Ingest files above to start!</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- FLOATING CHATBOT WIDGET -->
+    <div class="chatbot-widget-container" id="chatbot-widget">
+        <!-- Floating Launcher Bubble -->
+        <button class="chatbot-launcher glass-pulse" id="chat-launcher" aria-label="Open AI Assistant">
+            <span class="unread-badge" id="chat-badge" style="display: none;">1</span>
+            <i class="fa-solid fa-comments open-icon"></i>
+            <i class="fa-solid fa-xmark close-icon" style="display: none;"></i>
+        </button>
+
+        <!-- Chat window container -->
+        <div class="chat-window glass" id="chat-window">
+            <div class="chat-header">
+                <div class="chat-header-info">
+                    <div class="chat-avatar">
+                        <i class="fa-solid fa-robot"></i>
+                        <span class="status-indicator online"></span>
+                    </div>
+                    <div class="chat-title">
+                        <h3>Anu AI Assistant</h3>
+                        <p id="chat-subtitle">RAG Pipeline Active</p>
+                    </div>
+                </div>
+                <div class="chat-header-actions">
+                    <button class="chat-action-btn" id="btn-clear-chat" title="Clear Conversation">
+                        <i class="fa-solid fa-rotate-left"></i>
+                    </button>
+                    <button class="chat-action-btn" id="btn-minimize-chat" title="Minimize">
+                        <i class="fa-solid fa-minus"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Conversation message space -->
+            <div class="chat-messages" id="chat-messages">
+                <div class="msg-bubble assistant-msg animate-bubble">
+                    <div class="msg-avatar"><i class="fa-solid fa-robot"></i></div>
+                    <div class="msg-content">
+                        <p>Hello! I am your AI assistant running on top of **ChromaDB** and the **Google Gemini** model.</p>
+                        <p>Upload your PDF, text, or markdown files to the ingestion dashboard, and I will be able to answer your questions using those documents as real-time context!</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Suggestion Prompts -->
+            <div class="chat-suggestions" id="chat-suggestions">
+                <button class="suggestion-pill" data-query="What kind of documents have been uploaded?">What docs are ingested?</button>
+                <button class="suggestion-pill" data-query="Summarize the uploaded information.">Summarize knowledge base</button>
+            </div>
+
+            <!-- Typing Indicator -->
+            <div class="chat-typing-indicator" id="chat-typing" style="display: none;">
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+            </div>
+
+            <!-- Input area -->
+            <div class="chat-input-bar">
+                <textarea id="chat-input" placeholder="Ask a question about your documents..." rows="1"></textarea>
+                <button id="chat-send" class="btn-send" disabled>
+                    <i class="fa-solid fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/main.js"></script>
+    <script src="js/chatbot.js"></script>
+</body>
+</html>
