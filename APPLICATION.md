@@ -119,7 +119,7 @@ flowchart TB
 | Frontend | React 18, Vite, React Router, Lucide icons |
 | Gateway | Node.js, Express, `http-proxy-middleware`, `jsonwebtoken` |
 | Auth / HR / Projects / Finance | Python 3, FastAPI, Motor (async MongoDB) |
-| AI Service | Python 3, FastAPI, ChromaDB, PyPDF, Google Generative AI SDK |
+| AI Service | Python 3, FastAPI, ChromaDB, PyPDF, Groq API |
 | Primary database | MongoDB 7 (separate database per domain service) |
 | Vector store | ChromaDB (persistent volume, collection `rag_documents`) |
 | Auth tokens | JWT (HS256), access + refresh token rotation |
@@ -446,7 +446,7 @@ sequenceDiagram
     participant Gateway
     participant AI as AI Service
     participant Chroma as ChromaDB
-    participant LLM as Gemini or Groq
+    participant LLM as Groq or Local
 
     Note over User,Chroma: INGESTION (requires ai:admin)
     User->>Frontend: Upload PDF/TXT/MD
@@ -480,13 +480,8 @@ On startup, `RAGPipeline`:
 2. Gets or creates collection `rag_documents` with cosine similarity (`hnsw:space: cosine`)
 3. Selects **LLM provider** based on environment variables:
    - `GROQ_API_KEY` set → Groq `llama-3.3-70b-versatile` for chat
-   - Else `GEMINI_API_KEY` set → Google `gemini-1.5-flash` for chat
-   - Else → local heuristic fallback (no external LLM)
-4. Selects **embedding strategy** via `HybridEmbeddingFunction`:
-   - With valid Gemini key (and no Groq override) → `models/text-embedding-004`
-   - Without Gemini key → **local hash fallback** (384-dim character n-gram vectors)
-
-**Important behavior:** When `GROQ_API_KEY` is configured, the pipeline currently **disables Gemini embeddings** and uses the local hash fallback for vector search. Groq does not provide an embedding API. Semantic search quality is significantly reduced in this configuration unless a separate embedding provider is used.
+   - Else → local excerpt fallback (no external LLM)
+4. Uses **local embeddings** via Chroma `DefaultEmbeddingFunction` (`all-MiniLM-L6-v2`) — no API key required
 
 #### Document ingestion pipeline
 
@@ -499,7 +494,7 @@ On startup, `RAGPipeline`:
 | 3. Chunk | `chunk_text()` — ~1000 character windows, 200 char overlap, split at paragraph/sentence boundaries |
 | 4. Hash | `doc_hash = sha256(filename)[:12]` — document ID derived from filename |
 | 5. Store | Each chunk stored with ID `{doc_hash}_ch_{i}`, metadata `{filename, chunk_index, doc_hash}` |
-| 6. Embed | Chroma calls `HybridEmbeddingFunction` automatically on `collection.add()` |
+| 6. Embed | Chroma `LocalEmbeddingFunction` (MiniLM) on `collection.add()` |
 
 Supported file types: **`.pdf`**, **`.txt`**, **`.md`**
 
@@ -509,7 +504,7 @@ Supported file types: **`.pdf`**, **`.txt`**, **`.md`**
 
 | Step | Action |
 |------|--------|
-| 1. Retrieve | `collection.query(query_texts=[user_query], n_results=4)` |
+| 1. Retrieve | Vector search + keyword rerank → top 4 chunks |
 | 2. Build context | Join top chunks with source filenames |
 | 3. Prompt LLM | System rules: use context, cite sources, note when context is insufficient |
 | 4. Return | `{ query, answer, sources[], local_fallback }` |
@@ -541,8 +536,7 @@ Permission check for admin operations is in `ai-service/src/permissions.py` — 
 
 | Variable | Purpose |
 |----------|---------|
-| `GEMINI_API_KEY` | Gemini embeddings + optional Gemini chat |
-| `GROQ_API_KEY` | Groq Llama chat (overrides Gemini for LLM) |
+| `GROQ_API_KEY` | Groq Llama chat for RAG answers (optional but recommended) |
 | `CHROMA_DB_PATH` | Persistent Chroma storage directory |
 | `PORT` / `HOST` | Server binding |
 
@@ -550,10 +544,10 @@ Permission check for admin operations is in `ai-service/src/permissions.py` — 
 
 For accurate answers, these must align:
 
-1. **PDF text extraction** — scanned/image PDFs without text layers produce empty content
-2. **Embedding quality** — semantic embeddings (Gemini) retrieve relevant chunks; local hash often retrieves wrong chunks
-3. **Re-upload after config change** — changing embedding provider requires reset + re-ingest
-4. **Chunk retrieval** — only top 4 chunks are sent to the LLM; if none match, the model falls back to general knowledge
+1. **PDF text extraction** — scanned/image PDFs without text layers produce empty content; use `.txt` or real PDFs (must start with `%PDF-`)
+2. **`GROQ_API_KEY`** — required for full natural-language answers; without it, only excerpt snippets are returned
+3. **Re-upload after embedding model change** — reset document library and re-ingest if the vector index was built with an older embedding setup
+4. **Chunk retrieval** — top 4 reranked chunks are sent to Groq
 
 ---
 
@@ -799,7 +793,7 @@ These are intentional or current implementation traits useful for developers:
 
 3. **Gateway is the single auth enforcement point** for external clients; HR/projects/finance trust injected headers but do not re-validate JWT themselves.
 
-4. **Groq + embeddings** — Groq powers chat only; vector search falls back to local hash unless Gemini key is used for embeddings (see RAG section).
+4. **Groq for chat, local MiniLM for search** — no Google/Gemini API keys required.
 
 5. **Document IDs from filename** — re-uploading the same filename creates duplicate chunk IDs and may cause Chroma conflicts; delete or reset before re-uploading same name.
 

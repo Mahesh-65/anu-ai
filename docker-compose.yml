@@ -39,7 +39,6 @@ services:
       PORT: 8000
       HOST: 0.0.0.0
       CHROMA_DB_PATH: /app/chroma_db
-      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
     volumes:
       - chroma_data:/app/chroma_db
