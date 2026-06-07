@@ -95,7 +95,7 @@ async def create_user(
 
 @router.get("", response_model=List[UserResponse])
 async def list_users(
-    current_user: dict = Depends(PermissionChecker(["users:read"]))
+    current_user: dict = Depends(get_current_user)
 ):
     user_col = get_collection("users")
     cursor = user_col.find()
@@ -111,16 +111,6 @@ async def get_user_by_id(
     user_id: str,
     current_user: dict = Depends(get_current_user)
 ):
-    if current_user["role"] != "SUPER_ADMIN" and current_user["id"] != user_id:
-        role_col = get_collection("roles")
-        role = await role_col.find_one({"name": current_user["role"]})
-        permissions = role.get("permissions", []) if role else []
-        if "users:read" not in permissions:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied. Insufficient permissions."
-            )
-
     user_col = get_collection("users")
     try:
         user = await user_col.find_one({"_id": ObjectId(user_id)})

@@ -11,15 +11,15 @@ const NAV = [
     { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   ]},
   { section: 'Management', employeeSection: 'My Work', items: [
-    { to: '/hr',       label: 'HR & People',  icon: Users,         permission: 'hr:read' },
+    { to: '/hr',       label: 'HR & People',  icon: Users },
     { to: '/projects', label: 'Projects',     icon: FolderKanban,  permission: 'projects:read' },
     { to: '/finance',  label: 'Finance',      icon: DollarSign,  permission: 'finance:read' },
   ]},
   { section: 'Intelligence', employeeSection: 'Tools', items: [
     { to: '/ai', label: 'AI Assistant', icon: Brain, permission: 'ai:chat' },
   ]},
-  { section: 'Admin', items: [
-    { to: '/users', label: 'Team Accounts', icon: UserPlus, permission: 'users:read' },
+  { section: 'Admin', employeeSection: 'Directory', items: [
+    { to: '/users', label: 'Team Directory', icon: UserPlus },
     { to: '/settings', label: 'Settings', icon: Settings },
   ]},
 ];
@@ -46,8 +46,7 @@ export default function AppLayout({ children, pageTitle }) {
     ...section,
     section: employee && section.employeeSection ? section.employeeSection : section.section,
     items: section.items.filter((item) => {
-      if (item.to === '/settings') return true;
-      if (employee && item.to === '/users') return false;
+      if (item.to === '/settings' || item.to === '/hr' || item.to === '/users') return true;
       return !item.permission || hasPermission(item.permission);
     }),
   })).filter((section) => section.items.length > 0);

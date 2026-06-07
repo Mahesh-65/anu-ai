@@ -94,6 +94,7 @@ function UserModal({ user: u, roles, allowedRoles, onClose, onSaved, onCredentia
 
 export default function UsersPage() {
   const { user: me, hasPermission } = useAuth();
+  const canWrite = hasPermission('users:write');
   const allowedRoles = creatableRoles(me?.role);
   const [users,   setUsers]   = useState([]);
   const [roles,   setRoles]   = useState([]);
@@ -105,14 +106,24 @@ export default function UsersPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const [u, r] = await Promise.allSettled([usersApi.list(), rolesApi.list()]);
-      setUsers(u.value ?? []);
-      setRoles(r.value ?? []);
-    } catch {}
+      const u = await usersApi.list();
+      setUsers(u ?? []);
+      if (canWrite) {
+        try {
+          setRoles(await rolesApi.list());
+        } catch {
+          setRoles([]);
+        }
+      } else {
+        setRoles([]);
+      }
+    } catch {
+      setUsers([]);
+    }
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [canWrite]);
 
   const del = async (id) => {
     if (!confirm('Delete this user?')) return;
@@ -121,21 +132,24 @@ export default function UsersPage() {
 
   const visible = users.filter((u) => !isHiddenUser(u, me?.role));
   const filtered = visible.filter(u => `${u.first_name} ${u.last_name} ${u.email} ${u.role}`.toLowerCase().includes(search.toLowerCase()));
+  const roleSummary = roles.length > 0
+    ? roles.filter(r => r.name !== 'SUPER_ADMIN' || me?.role === 'SUPER_ADMIN')
+    : [...new Set(visible.map(u => u.role))].map(name => ({ name }));
 
   return (
-    <AppLayout pageTitle="Team Accounts">
+    <AppLayout pageTitle="Team Directory">
       <div className="page-header">
         <div className="page-header-left">
-          <h1>Team Accounts</h1>
-          <p>Create and manage login accounts for your organisation</p>
+          <h1>Team Directory</h1>
+          <p>{canWrite ? 'Create and manage login accounts for your organisation' : 'View team members and their roles'}</p>
         </div>
-        {hasPermission('users:write') && allowedRoles.length > 0 && (
+        {canWrite && allowedRoles.length > 0 && (
           <button className="btn btn-primary" onClick={() => setModal('new')}><Plus size={16}/> Create account</button>
         )}
       </div>
 
       <div style={{ display:'flex', gap:10, flexWrap:'wrap', marginBottom:24 }}>
-        {roles.filter(r => r.name !== 'SUPER_ADMIN' || me?.role === 'SUPER_ADMIN').map(r => (
+        {roleSummary.map(r => (
           <div key={r.name} style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 14px', background:'var(--bg-card)', border:'1px solid var(--border)', borderRadius:99, fontSize:12 }}>
             <Shield size={12} style={{ color: ROLE_COLOR[r.name] || 'var(--text-muted)' }}/>
             <span style={{ color: ROLE_COLOR[r.name] || 'var(--text-secondary)', fontWeight:600 }}>{r.name}</span>
@@ -156,7 +170,7 @@ export default function UsersPage() {
           <div className="empty-state"><div className="spinner" style={{width:32,height:32}}/></div>
         ) : (
           <table className="data-table">
-            <thead><tr><th>User</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
+            <thead><tr><th>User</th><th>Role</th><th>Status</th>{canWrite && <th>Actions</th>}</tr></thead>
             <tbody>
               {filtered.map(u => {
                 const rc = ROLE_COLOR[u.role] || 'var(--text-muted)';
@@ -175,16 +189,18 @@ export default function UsersPage() {
                     </td>
                     <td><span className="badge" style={{ background:`${rc}22`, color:rc }}><Shield size={10}/>{u.role}</span></td>
                     <td><span className={`badge ${u.status==='active'?'badge-success':'badge-gray'}`}>{u.status}</span></td>
-                    <td>
-                      <div className="flex gap-2">
-                        {hasPermission('users:write') && canManageUser(me?.role, u.role) && (
-                          <button className="btn btn-ghost btn-icon btn-sm" onClick={()=>setModal(u)}><Edit2 size={14}/></button>
-                        )}
-                        {hasPermission('users:write') && !isSelf && canManageUser(me?.role, u.role) && (
-                          <button className="btn btn-danger btn-icon btn-sm" onClick={()=>del(u.id)}><Trash2 size={14}/></button>
-                        )}
-                      </div>
-                    </td>
+                    {canWrite && (
+                      <td>
+                        <div className="flex gap-2">
+                          {canManageUser(me?.role, u.role) && (
+                            <button className="btn btn-ghost btn-icon btn-sm" onClick={()=>setModal(u)}><Edit2 size={14}/></button>
+                          )}
+                          {!isSelf && canManageUser(me?.role, u.role) && (
+                            <button className="btn btn-danger btn-icon btn-sm" onClick={()=>del(u.id)}><Trash2 size={14}/></button>
+                          )}
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 );
               })}

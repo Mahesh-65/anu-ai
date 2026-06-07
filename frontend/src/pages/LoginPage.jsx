@@ -86,6 +86,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setShowPw(v => !v)}
+                title={showPw ? 'Hide password' : 'Show password'}
                 style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
               >
                 {showPw ? <EyeOff size={15} /> : <Eye size={15} />}

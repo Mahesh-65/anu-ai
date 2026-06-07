@@ -1,17 +1,48 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Cpu, Lock, ArrowRight } from 'lucide-react';
+import { Cpu, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { authApi } from '../api/client';
+
+function PasswordField({ label, name, value, onChange, show, onToggle, autoComplete }) {
+  return (
+    <div className="form-group">
+      <label className="form-label">{label}</label>
+      <div style={{ position: 'relative' }}>
+        <Lock size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+        <input
+          name={name}
+          type={show ? 'text' : 'password'}
+          className="form-input"
+          style={{ paddingLeft: 36, paddingRight: 36 }}
+          value={value}
+          onChange={onChange}
+          required
+          autoComplete={autoComplete}
+        />
+        <button
+          type="button"
+          onClick={onToggle}
+          title={show ? 'Hide password' : 'Show password'}
+          style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
+        >
+          {show ? <EyeOff size={15} /> : <Eye size={15} />}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function ChangePasswordPage() {
   const { user, refreshUser } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({ current: '', next: '', confirm: '' });
+  const [show, setShow] = useState({ current: false, next: false, confirm: false });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
+  const toggleShow = (field) => setShow((s) => ({ ...s, [field]: !s[field] }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -58,21 +89,33 @@ export default function ChangePasswordPage() {
         </p>
 
         <form onSubmit={handleSubmit} autoComplete="off" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div className="form-group">
-            <label className="form-label">Current password</label>
-            <div style={{ position: 'relative' }}>
-              <Lock size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-              <input name="current" type="password" className="form-input" style={{ paddingLeft: 36 }} value={form.current} onChange={handleChange} required autoComplete="current-password" />
-            </div>
-          </div>
-          <div className="form-group">
-            <label className="form-label">New password</label>
-            <input name="next" type="password" className="form-input" value={form.next} onChange={handleChange} required autoComplete="new-password" />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Confirm new password</label>
-            <input name="confirm" type="password" className="form-input" value={form.confirm} onChange={handleChange} required autoComplete="new-password" />
-          </div>
+          <PasswordField
+            label="Current password"
+            name="current"
+            value={form.current}
+            onChange={handleChange}
+            show={show.current}
+            onToggle={() => toggleShow('current')}
+            autoComplete="current-password"
+          />
+          <PasswordField
+            label="New password"
+            name="next"
+            value={form.next}
+            onChange={handleChange}
+            show={show.next}
+            onToggle={() => toggleShow('next')}
+            autoComplete="new-password"
+          />
+          <PasswordField
+            label="Confirm new password"
+            name="confirm"
+            value={form.confirm}
+            onChange={handleChange}
+            show={show.confirm}
+            onToggle={() => toggleShow('confirm')}
+            autoComplete="new-password"
+          />
 
           {error && (
             <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '10px 14px', color: 'var(--danger)', fontSize: 13 }}>

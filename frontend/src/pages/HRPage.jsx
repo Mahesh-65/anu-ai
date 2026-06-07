@@ -98,6 +98,7 @@ function EmployeeModal({ emp, canCreateLogin, onClose, onSaved, onCredentials })
 
 export default function HRPage() {
   const { hasPermission } = useAuth();
+  const canWrite = hasPermission('hr:write');
   const canCreateLogin = hasPermission('users:write');
   const [employees, setEmployees] = useState([]);
   const [filtered,  setFiltered]  = useState([]);
@@ -134,9 +135,9 @@ export default function HRPage() {
       <div className="page-header">
         <div className="page-header-left">
           <h1>HR & People</h1>
-          <p>Manage employees, attendance and leave requests</p>
+          <p>{canWrite ? 'Manage employees, attendance and leave requests' : 'View colleagues across your organisation'}</p>
         </div>
-        {hasPermission('hr:write') && (
+        {canWrite && (
           <button className="btn btn-primary" onClick={() => setModal('add')}>
             <Plus size={16}/> {canCreateLogin ? 'Add Employee & Account' : 'Add Employee'}
           </button>
@@ -169,10 +170,15 @@ export default function HRPage() {
         {loading ? (
           <div className="empty-state"><div className="spinner" style={{width:32,height:32}}/></div>
         ) : filtered.length === 0 ? (
-          <div className="empty-state"><p>No employees found</p><button className="btn btn-primary" onClick={()=>setModal('add')}><Plus size={14}/> Add First Employee</button></div>
+          <div className="empty-state">
+            <p>No employees found</p>
+            {canWrite && (
+              <button className="btn btn-primary" onClick={()=>setModal('add')}><Plus size={14}/> Add First Employee</button>
+            )}
+          </div>
         ) : (
           <table className="data-table">
-            <thead><tr><th>Employee</th><th>Department</th><th>Position</th><th>Status</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Employee</th><th>Department</th><th>Position</th><th>Status</th>{canWrite && <th>Actions</th>}</tr></thead>
             <tbody>
               {filtered.map(e => {
                 const id = e._id ?? e.id;
@@ -191,12 +197,14 @@ export default function HRPage() {
                     <td><span className="chip" style={{ borderColor: deptColor, color: deptColor }}>{e.department}</span></td>
                     <td>{e.position || '—'}</td>
                     <td><span className={`badge ${STATUS_BADGE[e.status] || 'badge-gray'}`}>{e.status?.replace('_',' ')}</span></td>
-                    <td>
-                      <div className="flex gap-2">
-                        <button className="btn btn-ghost btn-icon btn-sm" onClick={()=>setModal(e)} title="Edit"><Edit2 size={14}/></button>
-                        <button className="btn btn-danger btn-icon btn-sm" onClick={()=>del(id)} title="Delete"><Trash2 size={14}/></button>
-                      </div>
-                    </td>
+                    {canWrite && (
+                      <td>
+                        <div className="flex gap-2">
+                          <button className="btn btn-ghost btn-icon btn-sm" onClick={()=>setModal(e)} title="Edit"><Edit2 size={14}/></button>
+                          <button className="btn btn-danger btn-icon btn-sm" onClick={()=>del(id)} title="Delete"><Trash2 size={14}/></button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 );
               })}

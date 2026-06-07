@@ -19,11 +19,11 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/change-password" element={<ProtectedRoute><ChangePasswordPage /></ProtectedRoute>} />
           <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-          <Route path="/hr"       element={<ProtectedRoute requiredPermission="hr:read"><HRPage /></ProtectedRoute>} />
+          <Route path="/hr"       element={<ProtectedRoute><HRPage /></ProtectedRoute>} />
           <Route path="/projects" element={<ProtectedRoute requiredPermission="projects:read"><ProjectsPage /></ProtectedRoute>} />
           <Route path="/finance"  element={<ProtectedRoute requiredPermission="finance:read"><FinancePage /></ProtectedRoute>} />
           <Route path="/ai"       element={<ProtectedRoute requiredPermission="ai:chat"><AIPage /></ProtectedRoute>} />
-          <Route path="/users"    element={<ProtectedRoute requiredPermission="users:read"><UsersPage /></ProtectedRoute>} />
+          <Route path="/users"    element={<ProtectedRoute><UsersPage /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
           <Route path="*"         element={<Navigate to="/" replace />} />
         </Routes>
