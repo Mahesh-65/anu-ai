@@ -27,7 +27,7 @@ DEFAULT_ROLES = {
         "finance:read", "finance:write", "ai:chat", "ai:admin"
     ],
     "HR_MANAGER": [
-        "users:read", "users:write", "hr:read", "hr:write", "ai:chat"
+        "users:read", "users:write", "hr:read", "hr:write", "ai:chat", "ai:admin"
     ],
     "PROJECT_MANAGER": [
         "users:read", "projects:read", "projects:write", "ai:chat"
@@ -93,6 +93,7 @@ async def seed_database():
             "last_name": "Admin",
             "role": "SUPER_ADMIN",
             "status": "active",
+            "must_change_password": True,
             "created_at": now,
             "updated_at": now
         }
@@ -100,5 +101,11 @@ async def seed_database():
         print(f"[Seeder] Default Super Admin user created ({admin_email} / Admin@123)")
     else:
         print("[Seeder] Admin user already exists.")
-    
+
+    # Require password change on first login for accounts missing the flag
+    await user_col.update_many(
+        {"must_change_password": {"$exists": False}},
+        {"$set": {"must_change_password": True}}
+    )
+
     print("[Seeder] Seeding database checks complete.")

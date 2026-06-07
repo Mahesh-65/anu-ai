@@ -1,8 +1,9 @@
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function ProtectedRoute({ children, requiredPermission }) {
   const { user, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) return (
     <div style={{ height:'100vh', display:'flex', alignItems:'center', justifyContent:'center' }}>
@@ -12,14 +13,12 @@ export default function ProtectedRoute({ children, requiredPermission }) {
 
   if (!user) return <Navigate to="/login" replace />;
 
+  if (user.must_change_password && location.pathname !== '/change-password') {
+    return <Navigate to="/change-password" replace />;
+  }
+
   if (requiredPermission && !user.permissions?.includes(requiredPermission)) {
-    return (
-      <div style={{ height:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:12 }}>
-        <div style={{ fontSize:48 }}>🔒</div>
-        <h2>Access Denied</h2>
-        <p>You don't have permission to view this page.</p>
-      </div>
-    );
+    return <Navigate to="/" replace />;
   }
 
   return children;

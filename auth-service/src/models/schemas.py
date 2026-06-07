@@ -46,11 +46,16 @@ class UserResponse(BaseModel):
     last_name: str
     role: str
     status: str
+    must_change_password: bool = False
     created_at: datetime
     updated_at: datetime
 
     class Config:
         from_attributes = True
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str = Field(..., min_length=6)
 
 class UserCreate(BaseModel):
     email: EmailStr

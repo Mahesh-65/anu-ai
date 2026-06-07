@@ -44,6 +44,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     user["id"] = str(user["_id"])
     user.pop("_id", None)
     user.pop("hashed_password", None)
+    user.setdefault("must_change_password", False)
     return user
 
 class PermissionChecker:
@@ -51,6 +52,12 @@ class PermissionChecker:
         self.required_permissions = required_permissions
 
     async def __call__(self, current_user: dict = Depends(get_current_user)):
+        if current_user.get("must_change_password"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You must change your password before continuing.",
+            )
+
         # Super admin has all permissions
         if current_user.get("role") == "SUPER_ADMIN":
             return current_user

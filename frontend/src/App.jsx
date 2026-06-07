@@ -9,6 +9,7 @@ import FinancePage  from './pages/FinancePage';
 import AIPage       from './pages/AIPage';
 import UsersPage    from './pages/UsersPage';
 import SettingsPage from './pages/SettingsPage';
+import ChangePasswordPage from './pages/ChangePasswordPage';
 
 export default function App() {
   return (
@@ -16,6 +17,7 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/change-password" element={<ProtectedRoute><ChangePasswordPage /></ProtectedRoute>} />
           <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
           <Route path="/hr"       element={<ProtectedRoute requiredPermission="hr:read"><HRPage /></ProtectedRoute>} />
           <Route path="/projects" element={<ProtectedRoute requiredPermission="projects:read"><ProjectsPage /></ProtectedRoute>} />

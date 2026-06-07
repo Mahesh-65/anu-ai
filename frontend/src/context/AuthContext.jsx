@@ -22,6 +22,12 @@ export function AuthProvider({ children }) {
 
   useEffect(() => { loadMe(); }, [loadMe]);
 
+  const refreshUser = useCallback(async () => {
+    const me = await authApi.me();
+    setUser(me);
+    return me;
+  }, []);
+
   const login = async (email, password) => {
     const data = await authApi.login(email, password);
     authApi.setTokens(data.access_token, data.refresh_token);
@@ -43,7 +49,7 @@ export function AuthProvider({ children }) {
   const hasRole       = (role) => user?.role === role;
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, hasPermission, hasRole }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, refreshUser, hasPermission, hasRole }}>
       {children}
     </AuthContext.Provider>
   );

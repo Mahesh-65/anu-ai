@@ -67,7 +67,9 @@ export const authApi = {
   login:    (email, password) => request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
   register: (data)            => request('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
   logout:   (refresh_token)   => request(`/auth/logout?refresh_token=${refresh_token}`, { method: 'POST' }),
-  me:       ()                => request('/auth/me'),
+  me:             () => request('/auth/me'),
+  changePassword: (current_password, new_password) =>
+    request('/auth/change-password', { method: 'POST', body: JSON.stringify({ current_password, new_password }) }),
   setTokens,
   clearTokens,
   getToken,

@@ -4,7 +4,7 @@ import AppLayout from '../components/AppLayout';
 import CredentialsModal from '../components/CredentialsModal';
 import { usersApi, rolesApi } from '../api/client';
 import { useAuth } from '../context/AuthContext';
-import { creatableRoles } from '../utils/roles';
+import { creatableRoles, canManageUser, isHiddenUser } from '../utils/roles';
 
 const ROLE_COLOR = { SUPER_ADMIN:'var(--danger)', ORG_ADMIN:'var(--primary)', HR_MANAGER:'var(--success)', PROJECT_MANAGER:'var(--secondary)', FINANCE_MANAGER:'var(--warning)', EMPLOYEE:'var(--text-muted)' };
 
@@ -119,7 +119,8 @@ export default function UsersPage() {
     await usersApi.remove(id); load();
   };
 
-  const filtered = users.filter(u => `${u.first_name} ${u.last_name} ${u.email} ${u.role}`.toLowerCase().includes(search.toLowerCase()));
+  const visible = users.filter((u) => !isHiddenUser(u, me?.role));
+  const filtered = visible.filter(u => `${u.first_name} ${u.last_name} ${u.email} ${u.role}`.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <AppLayout pageTitle="Team Accounts">
@@ -134,11 +135,11 @@ export default function UsersPage() {
       </div>
 
       <div style={{ display:'flex', gap:10, flexWrap:'wrap', marginBottom:24 }}>
-        {roles.map(r => (
+        {roles.filter(r => r.name !== 'SUPER_ADMIN' || me?.role === 'SUPER_ADMIN').map(r => (
           <div key={r.name} style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 14px', background:'var(--bg-card)', border:'1px solid var(--border)', borderRadius:99, fontSize:12 }}>
             <Shield size={12} style={{ color: ROLE_COLOR[r.name] || 'var(--text-muted)' }}/>
             <span style={{ color: ROLE_COLOR[r.name] || 'var(--text-secondary)', fontWeight:600 }}>{r.name}</span>
-            <span style={{ color:'var(--text-muted)' }}>{users.filter(u=>u.role===r.name).length} users</span>
+            <span style={{ color:'var(--text-muted)' }}>{visible.filter(u=>u.role===r.name).length} users</span>
           </div>
         ))}
       </div>
@@ -176,8 +177,12 @@ export default function UsersPage() {
                     <td><span className={`badge ${u.status==='active'?'badge-success':'badge-gray'}`}>{u.status}</span></td>
                     <td>
                       <div className="flex gap-2">
-                        {hasPermission('users:write') && <button className="btn btn-ghost btn-icon btn-sm" onClick={()=>setModal(u)}><Edit2 size={14}/></button>}
-                        {hasPermission('users:write') && !isSelf && <button className="btn btn-danger btn-icon btn-sm" onClick={()=>del(u.id)}><Trash2 size={14}/></button>}
+                        {hasPermission('users:write') && canManageUser(me?.role, u.role) && (
+                          <button className="btn btn-ghost btn-icon btn-sm" onClick={()=>setModal(u)}><Edit2 size={14}/></button>
+                        )}
+                        {hasPermission('users:write') && !isSelf && canManageUser(me?.role, u.role) && (
+                          <button className="btn btn-danger btn-icon btn-sm" onClick={()=>del(u.id)}><Trash2 size={14}/></button>
+                        )}
                       </div>
                     </td>
                   </tr>

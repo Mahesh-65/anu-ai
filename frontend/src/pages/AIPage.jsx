@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Send, Upload, RefreshCw, Brain, FileText, Trash2, X } from 'lucide-react';
 import AppLayout from '../components/AppLayout';
 import { aiApi } from '../api/client';
+import { useAuth } from '../context/AuthContext';
 
 function Message({ msg }) {
   const isUser = msg.role === 'user';
@@ -35,7 +36,14 @@ function Message({ msg }) {
 }
 
 export default function AIPage() {
-  const [messages,  setMessages]  = useState([{ role:'assistant', content:'Hello! I\'m your AI assistant powered by Groq Llama 3. Upload company documents and ask me anything!' }]);
+  const { hasPermission } = useAuth();
+  const canUpload = hasPermission('ai:admin');
+  const [messages,  setMessages]  = useState([{
+    role:'assistant',
+    content: canUpload
+      ? 'Hello! Upload company documents and ask me anything about them.'
+      : 'Hello! Ask me questions about documents your team has uploaded.',
+  }]);
   const [input,     setInput]     = useState('');
   const [documents, setDocuments] = useState([]);
   const [sending,   setSending]   = useState(false);
@@ -130,9 +138,11 @@ export default function AIPage() {
               onChange={e => setInput(e.target.value)}
               disabled={sending}
             />
-            <button type="button" className="btn btn-secondary btn-icon" onClick={() => fileRef.current?.click()} disabled={uploading} title="Upload document">
-              {uploading ? <span className="spinner"/> : <Upload size={16}/>}
-            </button>
+            {canUpload && (
+              <button type="button" className="btn btn-secondary btn-icon" onClick={() => fileRef.current?.click()} disabled={uploading} title="Upload document">
+                {uploading ? <span className="spinner"/> : <Upload size={16}/>}
+              </button>
+            )}
             <button type="submit" className="btn btn-primary btn-icon" disabled={sending || !input.trim()}>
               <Send size={16}/>
             </button>
@@ -145,16 +155,20 @@ export default function AIPage() {
           <div className="card" style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column', padding:0 }}>
             <div style={{ padding:'14px 16px', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
               <span style={{ fontWeight:600, fontSize:13 }}>Document Library</span>
-              <button className="btn btn-ghost btn-icon btn-sm" onClick={reset} title="Reset"><RefreshCw size={14}/></button>
+              {canUpload && (
+                <button className="btn btn-ghost btn-icon btn-sm" onClick={reset} title="Reset"><RefreshCw size={14}/></button>
+              )}
             </div>
             <div style={{ flex:1, overflowY:'auto', padding:12 }}>
               {documents.length === 0 ? (
                 <div className="empty-state" style={{ padding:24 }}>
                   <FileText size={32}/>
-                  <p style={{ fontSize:12 }}>No documents uploaded yet</p>
-                  <button className="btn btn-primary btn-sm" onClick={() => fileRef.current?.click()}>
-                    <Upload size={12}/> Upload PDF
-                  </button>
+                  <p style={{ fontSize:12 }}>{canUpload ? 'No documents uploaded yet' : 'No documents available yet'}</p>
+                  {canUpload && (
+                    <button className="btn btn-primary btn-sm" onClick={() => fileRef.current?.click()}>
+                      <Upload size={12}/> Upload PDF
+                    </button>
+                  )}
                 </div>
               ) : documents.map((d, i) => (
                 <div key={i} style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 10px', borderRadius:'var(--radius-sm)', marginBottom:4, background:'var(--bg-hover)' }}>

@@ -1,6 +1,6 @@
 import os
 import shutil
-from fastapi import FastAPI, UploadFile, File, HTTPException, Body
+from fastapi import FastAPI, UploadFile, File, HTTPException, Body, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -11,8 +11,10 @@ load_dotenv()
 
 try:
     from src.rag_pipeline import RAGPipeline
+    from src.permissions import require_ai_admin
 except ModuleNotFoundError:
     from rag_pipeline import RAGPipeline
+    from permissions import require_ai_admin
 
 
 app = FastAPI(
@@ -83,7 +85,10 @@ def get_documents():
 
 @app.post("/api/ingest")
 @app.post("/ingest")
-async def ingest_document(file: UploadFile = File(...)):
+async def ingest_document(
+    file: UploadFile = File(...),
+    _: None = Depends(require_ai_admin),
+):
     """
     Accepts a PDF, TXT, or MD file, extracts and chunks text,
     and inserts embeddings into the Chroma vector database.
@@ -140,7 +145,7 @@ def query_documents(request: QueryRequest):
 
 @app.delete("/api/documents/{doc_hash}")
 @app.delete("/documents/{doc_hash}")
-def delete_document(doc_hash: str):
+def delete_document(doc_hash: str, _: None = Depends(require_ai_admin)):
     """
     Deletes all segments and vector embeddings of a document by its hash ID.
     """
@@ -157,7 +162,7 @@ def delete_document(doc_hash: str):
 
 @app.post("/api/reset")
 @app.post("/reset")
-def reset_database():
+def reset_database(_: None = Depends(require_ai_admin)):
     """
     Deletes the entire vector collection and starts fresh.
     """

@@ -18,8 +18,8 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      await login(form.email, form.password);
-      navigate('/');
+      const me = await login(form.email, form.password);
+      navigate(me?.must_change_password ? '/change-password' : '/');
     } catch (err) {
       setError(err.message || 'Login failed. Please check your credentials.');
     } finally {

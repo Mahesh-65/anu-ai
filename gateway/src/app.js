@@ -57,6 +57,21 @@ const authenticateToken = (req, res, next) => {
             });
         }
         
+        // Block API access until first-login password change
+        if (decoded.must_change_password) {
+            const passwordChangeAllowed = [
+                '/api/auth/me',
+                '/api/auth/change-password',
+                '/api/auth/logout',
+            ];
+            if (!passwordChangeAllowed.some(prefix => req.path.startsWith(prefix))) {
+                return res.status(403).json({
+                    status: 'error',
+                    message: 'Password change required. Update your password before continuing.',
+                });
+            }
+        }
+
         // Attach user info to request and headers for downstream microservices
         req.user = decoded;
         req.headers['x-user-email'] = decoded.sub || '';
