@@ -13,12 +13,13 @@ services:
 
   auth:
     build: ./auth-service
+    image: maheshnandi/organisation-auth:v1.0.0
     restart: unless-stopped
     environment:
       PORT: 8001
       HOST: 0.0.0.0
       MONGODB_URI: mongodb://mongo:27017
-      DB_NAME: organistation_auth
+      DB_NAME: organisation_auth
       JWT_SECRET: ${JWT_SECRET}
       JWT_ACCESS_EXPIRY_MINUTES: 15
       JWT_REFRESH_EXPIRY_DAYS: 7
@@ -28,6 +29,7 @@ services:
 
   ai:
     build: ./ai-service
+    image: maheshnandi/organisation-ai:v1.0.0
     restart: unless-stopped
     environment:
       PORT: 8000
@@ -40,42 +42,46 @@ services:
 
   hr:
     build: ./hr-service
+    image: maheshnandi/organisation-hr:v1.0.0
     restart: unless-stopped
     environment:
       PORT: 8002
       HOST: 0.0.0.0
       MONGODB_URI: mongodb://mongo:27017
-      DB_NAME: organistation_hr
+      DB_NAME: organisation_hr
     depends_on:
       mongo:
         condition: service_healthy
 
   projects:
     build: ./project-management-service
+    image: maheshnandi/organisation-projects:v1.0.0
     restart: unless-stopped
     environment:
       PORT: 8003
       HOST: 0.0.0.0
       MONGODB_URI: mongodb://mongo:27017
-      DB_NAME: organistation_projects
+      DB_NAME: organisation_projects
     depends_on:
       mongo:
         condition: service_healthy
 
   finance:
     build: ./finance-service
+    image: maheshnandi/organisation-finance:v1.0.0
     restart: unless-stopped
     environment:
       PORT: 8004
       HOST: 0.0.0.0
       MONGODB_URI: mongodb://mongo:27017
-      DB_NAME: organistation_finance
+      DB_NAME: organisation_finance
     depends_on:
       mongo:
         condition: service_healthy
 
   gateway:
     build: ./gateway
+    image: maheshnandi/organisation-gateway:v1.0.0
     restart: unless-stopped
     ports:
       - "3000:3000"
