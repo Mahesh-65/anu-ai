@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Cpu, Mail, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -30,7 +30,6 @@ export default function LoginPage() {
   return (
     <div className="auth-page">
       <div className="auth-card">
-        {/* Logo */}
         <div className="auth-logo">
           <div className="sidebar-logo-icon">
             <Cpu size={18} />
@@ -42,9 +41,9 @@ export default function LoginPage() {
         </div>
 
         <h2 style={{ marginBottom: 6 }}>Welcome back</h2>
-        <p style={{ marginBottom: 28, fontSize: 13 }}>Sign in to your workspace</p>
+        <p style={{ marginBottom: 28, fontSize: 13 }}>Sign in with credentials provided by your administrator</p>
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <form onSubmit={handleSubmit} autoComplete="off" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div className="form-group">
             <label className="form-label">Email Address</label>
             <div style={{ position: 'relative' }}>
@@ -57,9 +56,11 @@ export default function LoginPage() {
                 style={{ paddingLeft: 36 }}
                 value={form.email}
                 onChange={handleChange}
-                placeholder="you@example.com"
+                placeholder="you@company.com"
                 required
-                autoComplete="email"
+                autoComplete="off"
+                readOnly
+                onFocus={(e) => e.target.removeAttribute('readonly')}
               />
             </div>
           </div>
@@ -78,7 +79,9 @@ export default function LoginPage() {
                 onChange={handleChange}
                 placeholder="••••••••"
                 required
-                autoComplete="current-password"
+                autoComplete="new-password"
+                readOnly
+                onFocus={(e) => e.target.removeAttribute('readonly')}
               />
               <button
                 type="button"
@@ -100,11 +103,6 @@ export default function LoginPage() {
             {loading ? <span className="spinner" style={{ width: 16, height: 16 }} /> : <>Sign In <ArrowRight size={15} /></>}
           </button>
         </form>
-
-        <p style={{ marginTop: 20, fontSize: 13, textAlign: 'center', color: 'var(--text-secondary)' }}>
-          Don&apos;t have an account?{' '}
-          <Link to="/register" style={{ color: 'var(--accent)', fontWeight: 600 }}>Create account</Link>
-        </p>
       </div>
     </div>
   );

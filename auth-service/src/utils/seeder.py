@@ -27,7 +27,7 @@ DEFAULT_ROLES = {
         "finance:read", "finance:write", "ai:chat", "ai:admin"
     ],
     "HR_MANAGER": [
-        "users:read", "hr:read", "hr:write", "ai:chat"
+        "users:read", "users:write", "hr:read", "hr:write", "ai:chat"
     ],
     "PROJECT_MANAGER": [
         "users:read", "projects:read", "projects:write", "ai:chat"
@@ -36,7 +36,7 @@ DEFAULT_ROLES = {
         "users:read", "finance:read", "finance:write", "ai:chat"
     ],
     "EMPLOYEE": [
-        "users:read", "projects:read", "ai:chat"
+        "projects:read", "ai:chat"
     ]
 }
 

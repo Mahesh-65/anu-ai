@@ -1,27 +1,26 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   Cpu, LayoutDashboard, Users, FolderKanban,
-  DollarSign, Brain, Settings, LogOut, ChevronRight,
-  Bell, Sun, Moon, Search
+  DollarSign, Brain, Settings, LogOut, Bell, Search, UserPlus
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { useState } from 'react';
+import { isEmployee } from '../utils/roles';
 
 const NAV = [
   { section: 'Overview', items: [
-    { to: '/',         label: 'Dashboard',   icon: LayoutDashboard },
+    { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   ]},
-  { section: 'Management', items: [
-    { to: '/hr',       label: 'HR & People', icon: Users },
-    { to: '/projects', label: 'Projects',    icon: FolderKanban },
-    { to: '/finance',  label: 'Finance',     icon: DollarSign },
+  { section: 'Management', employeeSection: 'My Work', items: [
+    { to: '/hr',       label: 'HR & People',  icon: Users,         permission: 'hr:read' },
+    { to: '/projects', label: 'Projects',     icon: FolderKanban,  permission: 'projects:read' },
+    { to: '/finance',  label: 'Finance',      icon: DollarSign,  permission: 'finance:read' },
   ]},
-  { section: 'Intelligence', items: [
-    { to: '/ai',       label: 'AI Assistant',icon: Brain },
+  { section: 'Intelligence', employeeSection: 'Tools', items: [
+    { to: '/ai', label: 'AI Assistant', icon: Brain, permission: 'ai:chat' },
   ]},
   { section: 'Admin', items: [
-    { to: '/users',    label: 'Users',       icon: Users },
-    { to: '/settings', label: 'Settings',    icon: Settings },
+    { to: '/users', label: 'Team Accounts', icon: UserPlus, permission: 'users:read' },
+    { to: '/settings', label: 'Settings', icon: Settings },
   ]},
 ];
 
@@ -31,9 +30,9 @@ function avatarColor(name = '') {
 }
 
 export default function AppLayout({ children, pageTitle }) {
-  const { user, logout } = useAuth();
+  const { user, logout, hasPermission } = useAuth();
   const navigate = useNavigate();
-  const [dark] = useState(true);
+  const employee = isEmployee(user?.role);
 
   const handleLogout = async () => {
     await logout();
@@ -43,17 +42,31 @@ export default function AppLayout({ children, pageTitle }) {
   const initials = user ? `${user.first_name?.[0] ?? ''}${user.last_name?.[0] ?? ''}`.toUpperCase() : 'U';
   const bg = avatarColor(user?.first_name ?? '');
 
+  const visibleNav = NAV.map((section) => ({
+    ...section,
+    section: employee && section.employeeSection ? section.employeeSection : section.section,
+    items: section.items.filter((item) => {
+      if (item.to === '/settings') return true;
+      if (employee && item.to === '/users') return false;
+      return !item.permission || hasPermission(item.permission);
+    }),
+  })).filter((section) => section.items.length > 0);
+
   return (
-    <div className="app-shell">
-      {/* ── Sidebar ── */}
+    <div className={`app-shell ${employee ? 'employee-shell' : ''}`}>
       <aside className="sidebar">
         <div className="sidebar-logo">
           <div className="sidebar-logo-icon"><Cpu size={18} /></div>
-          <div className="sidebar-logo-text">Organi<span>Station</span></div>
+          <div>
+            <div className="sidebar-logo-text">Organi<span>Station</span></div>
+            <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+              {employee ? 'Employee Portal' : 'Admin Portal'}
+            </div>
+          </div>
         </div>
 
         <nav className="sidebar-nav">
-          {NAV.map(section => (
+          {visibleNav.map((section) => (
             <div key={section.section}>
               <div className="nav-section-title">{section.section}</div>
               {section.items.map(({ to, label, icon: Icon }) => (
@@ -72,7 +85,7 @@ export default function AppLayout({ children, pageTitle }) {
         </nav>
 
         <div className="sidebar-footer">
-          <div style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 10px', borderRadius:'var(--radius-md)', cursor:'pointer' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 10px', borderRadius:'var(--radius-md)' }}>
             <div className="avatar avatar-sm" style={{ background: bg, color: '#fff' }}>{initials}</div>
             <div style={{ flex:1, minWidth:0 }}>
               <div style={{ fontSize:13, fontWeight:600, color:'var(--text-primary)' }} className="truncate">
@@ -87,24 +100,24 @@ export default function AppLayout({ children, pageTitle }) {
         </div>
       </aside>
 
-      {/* ── Topbar ── */}
       <header className="topbar">
         <span className="topbar-title">{pageTitle}</span>
         <div className="topbar-actions">
-          <div style={{ position:'relative' }}>
-            <Search size={14} style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', color:'var(--text-muted)' }} />
-            <input
-              className="form-input"
-              style={{ paddingLeft:32, width:220, height:34, background:'var(--bg-base)' }}
-              placeholder="Search..."
-            />
-          </div>
+          {!employee && (
+            <div style={{ position:'relative' }}>
+              <Search size={14} style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', color:'var(--text-muted)' }} />
+              <input
+                className="form-input"
+                style={{ paddingLeft:32, width:220, height:34, background:'var(--bg-base)' }}
+                placeholder="Search..."
+              />
+            </div>
+          )}
           <button className="btn btn-ghost btn-icon"><Bell size={17} /></button>
-          <div className="avatar avatar-sm" style={{ background: bg, color:'#fff', cursor:'pointer' }}>{initials}</div>
+          <div className="avatar avatar-sm" style={{ background: bg, color:'#fff' }}>{initials}</div>
         </div>
       </header>
 
-      {/* ── Main ── */}
       <main className="main-content">
         {children}
       </main>

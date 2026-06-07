@@ -12,46 +12,10 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def register(user_data: UserRegister):
-    user_col = get_collection("users")
-    role_col = get_collection("roles")
-
-    # Public self-registration is limited to EMPLOYEE
-    role_name = "EMPLOYEE"
-
-    # Check if user already exists
-    existing_user = await user_col.find_one({"email": user_data.email})
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="A user with this email already exists."
-        )
-
-    # Validate role
-    role = await role_col.find_one({"name": role_name})
-    if not role:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Role '{role_name}' does not exist."
-        )
-
-    # Hash password and insert
-    hashed = hash_password(user_data.password)
-    now = datetime.utcnow()
-    new_user = {
-        "email": user_data.email,
-        "hashed_password": hashed,
-        "first_name": user_data.first_name,
-        "last_name": user_data.last_name,
-        "role": role_name,
-        "status": "active",
-        "created_at": now,
-        "updated_at": now
-    }
-
-    result = await user_col.insert_one(new_user)
-    new_user["id"] = str(result.inserted_id)
-    new_user.pop("_id", None)
-    return new_user
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Public registration is disabled. Ask your HR or admin to create your account.",
+    )
 
 @router.post("/login", response_model=Token)
 async def login(credentials: UserLogin):

@@ -52,6 +52,16 @@ class UserResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class UserCreate(BaseModel):
+    email: EmailStr
+    password: Optional[str] = Field(None, min_length=6)
+    first_name: str
+    last_name: str
+    role: str = "EMPLOYEE"
+
+class UserCreateResponse(UserResponse):
+    temporary_password: Optional[str] = None
+
 class UserUpdate(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None

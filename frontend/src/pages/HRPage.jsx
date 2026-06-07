@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react';
-import { Plus, Search, Edit2, Trash2, UserCheck, UserX, X } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, X } from 'lucide-react';
 import AppLayout from '../components/AppLayout';
-import { hrApi } from '../api/client';
+import CredentialsModal from '../components/CredentialsModal';
+import { hrApi, usersApi } from '../api/client';
+import { useAuth } from '../context/AuthContext';
 
 const DEPT_COLORS = { Engineering:'var(--primary)', HR:'var(--success)', Finance:'var(--warning)', Marketing:'var(--pink)', Operations:'var(--secondary)' };
 const STATUS_BADGE = { active:'badge-success', inactive:'badge-gray', on_leave:'badge-warning' };
 
-function EmployeeModal({ emp, onClose, onSaved }) {
+function EmployeeModal({ emp, canCreateLogin, onClose, onSaved, onCredentials }) {
   const blank = { first_name:'', last_name:'', email:'', department:'Engineering', position:'', phone:'', status:'active' };
   const [form, setForm] = useState(emp ? { ...emp } : blank);
+  const [createLogin, setCreateLogin] = useState(canCreateLogin);
   const [saving, setSaving] = useState(false);
   const [error, setError]   = useState('');
 
@@ -17,9 +20,30 @@ function EmployeeModal({ emp, onClose, onSaved }) {
   const submit = async (e) => {
     e.preventDefault(); setSaving(true); setError('');
     try {
-      if (emp?._id || emp?.id) await hrApi.updateEmployee(emp._id ?? emp.id, form);
-      else                      await hrApi.createEmployee(form);
+      if (emp?._id || emp?.id) {
+        await hrApi.updateEmployee(emp._id ?? emp.id, form);
+        onSaved();
+        return;
+      }
+
+      let credentials = null;
+      if (createLogin && canCreateLogin) {
+        const account = await usersApi.create({
+          email: form.email,
+          first_name: form.first_name,
+          last_name: form.last_name,
+          role: 'EMPLOYEE',
+        });
+        credentials = {
+          email: account.email,
+          password: account.temporary_password,
+          name: `${account.first_name} ${account.last_name}`,
+        };
+      }
+
+      await hrApi.createEmployee(form);
       onSaved();
+      if (credentials?.password) onCredentials(credentials);
     } catch (err) { setError(err.message); }
     finally { setSaving(false); }
   };
@@ -53,10 +77,18 @@ function EmployeeModal({ emp, onClose, onSaved }) {
               </select>
             </div>
           </div>
+          {!emp && canCreateLogin && (
+            <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, cursor:'pointer' }}>
+              <input type="checkbox" checked={createLogin} onChange={(e) => setCreateLogin(e.target.checked)} />
+              Create login account and generate password for this employee
+            </label>
+          )}
           {error && <div style={{ color:'var(--danger)', fontSize:12 }}>{error}</div>}
           <div className="modal-footer">
             <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Saving...' : 'Save Employee'}</button>
+            <button type="submit" className="btn btn-primary" disabled={saving}>
+              {saving ? 'Saving...' : emp ? 'Save Employee' : createLogin ? 'Create employee & account' : 'Save Employee'}
+            </button>
           </div>
         </form>
       </div>
@@ -65,11 +97,14 @@ function EmployeeModal({ emp, onClose, onSaved }) {
 }
 
 export default function HRPage() {
+  const { hasPermission } = useAuth();
+  const canCreateLogin = hasPermission('users:write');
   const [employees, setEmployees] = useState([]);
   const [filtered,  setFiltered]  = useState([]);
   const [search,    setSearch]    = useState('');
   const [loading,   setLoading]   = useState(true);
-  const [modal,     setModal]     = useState(null); // null | 'add' | emp object
+  const [modal,     setModal]     = useState(null);
+  const [credentials, setCredentials] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -101,7 +136,11 @@ export default function HRPage() {
           <h1>HR & People</h1>
           <p>Manage employees, attendance and leave requests</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setModal('add')}><Plus size={16}/> Add Employee</button>
+        {hasPermission('hr:write') && (
+          <button className="btn btn-primary" onClick={() => setModal('add')}>
+            <Plus size={16}/> {canCreateLogin ? 'Add Employee & Account' : 'Add Employee'}
+          </button>
+        )}
       </div>
 
       {/* Stats */}
@@ -169,8 +208,19 @@ export default function HRPage() {
       {modal && (
         <EmployeeModal
           emp={modal === 'add' ? null : modal}
+          canCreateLogin={canCreateLogin}
           onClose={() => setModal(null)}
           onSaved={() => { setModal(null); load(); }}
+          onCredentials={setCredentials}
+        />
+      )}
+
+      {credentials && (
+        <CredentialsModal
+          email={credentials.email}
+          password={credentials.password}
+          name={credentials.name}
+          onClose={() => setCredentials(null)}
         />
       )}
     </AppLayout>

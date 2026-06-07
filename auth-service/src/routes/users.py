@@ -1,18 +1,80 @@
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
-from src.database import get_collection
-from src.models.schemas import UserResponse, UserUpdate
-from src.utils.auth_deps import PermissionChecker, get_current_user
-from bson import ObjectId
 import datetime
+import secrets
+import string
+from fastapi import APIRouter, Depends, HTTPException, status
+from bson import ObjectId
+from src.database import get_collection
+from src.models.schemas import UserCreate, UserCreateResponse, UserResponse, UserUpdate
+from src.utils.auth_deps import PermissionChecker, get_current_user
+from src.utils.security import hash_password
 
 router = APIRouter(prefix="/users", tags=["Users"])
+
+ROLE_CREATABLE = {
+    "SUPER_ADMIN": ["SUPER_ADMIN", "ORG_ADMIN", "HR_MANAGER", "PROJECT_MANAGER", "FINANCE_MANAGER", "EMPLOYEE"],
+    "ORG_ADMIN": ["HR_MANAGER", "PROJECT_MANAGER", "FINANCE_MANAGER", "EMPLOYEE"],
+    "HR_MANAGER": ["EMPLOYEE"],
+}
+
+def _generate_password(length: int = 10) -> str:
+    alphabet = string.ascii_letters + string.digits
+    return "".join(secrets.choice(alphabet) for _ in range(length))
 
 def serialize_user(user) -> dict:
     user["id"] = str(user["_id"])
     user.pop("hashed_password", None)
     user.pop("_id", None)
     return user
+
+@router.post("", response_model=UserCreateResponse, status_code=status.HTTP_201_CREATED)
+async def create_user(
+    user_data: UserCreate,
+    current_user: dict = Depends(PermissionChecker(["users:write"]))
+):
+    user_col = get_collection("users")
+    role_col = get_collection("roles")
+
+    allowed_roles = ROLE_CREATABLE.get(current_user["role"], [])
+    if user_data.role not in allowed_roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"You cannot create accounts with role '{user_data.role}'.",
+        )
+
+    existing_user = await user_col.find_one({"email": user_data.email})
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A user with this email already exists.",
+        )
+
+    role = await role_col.find_one({"name": user_data.role})
+    if not role:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Role '{user_data.role}' does not exist.",
+        )
+
+    temp_password = user_data.password or _generate_password()
+    now = datetime.datetime.utcnow()
+    new_user = {
+        "email": user_data.email,
+        "hashed_password": hash_password(temp_password),
+        "first_name": user_data.first_name,
+        "last_name": user_data.last_name,
+        "role": user_data.role,
+        "status": "active",
+        "created_at": now,
+        "updated_at": now,
+    }
+
+    result = await user_col.insert_one(new_user)
+    new_user["id"] = str(result.inserted_id)
+    new_user.pop("_id", None)
+    new_user["temporary_password"] = None if user_data.password else temp_password
+    new_user.pop("hashed_password", None)
+    return new_user
 
 @router.get("", response_model=List[UserResponse])
 async def list_users(
