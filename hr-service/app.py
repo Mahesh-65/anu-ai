@@ -15,6 +15,7 @@ MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
 DB_NAME     = os.getenv("DB_NAME", "organistation_hr")
 PORT        = int(os.getenv("PORT", "8002"))
 HOST        = os.getenv("HOST", "0.0.0.0")
+INTERNAL_SERVICE_SECRET = os.getenv("INTERNAL_SERVICE_SECRET", "organistation_internal_secret")
 
 client: AsyncIOMotorClient = None
 db = None
@@ -78,6 +79,21 @@ class Attendance(BaseModel):
     check_out:   Optional[str] = None
     status:      str = "present"
 
+class PurgeUserRequest(BaseModel):
+    email:      str
+    first_name: Optional[str] = None
+    last_name:  Optional[str] = None
+
+def _verify_internal(x_internal_secret: Optional[str]):
+    if x_internal_secret != INTERNAL_SERVICE_SECRET:
+        raise HTTPException(403, "Forbidden")
+
+async def _delete_employee_records(eid: str):
+    await db.attendance.delete_many({"employee_id": eid})
+    await db.leave_requests.delete_many({"employee_id": eid})
+    result = await db.employees.delete_one({"_id": ObjectId(eid)})
+    return result.deleted_count
+
 # ── Health ─────────────────────────────────────────────────────────────────────
 
 @app.get("/")
@@ -118,9 +134,31 @@ async def update_employee(eid: str, emp: Employee):
 
 @app.delete("/api/employees/{eid}")
 async def delete_employee(eid: str):
-    r = await db.employees.delete_one({"_id": ObjectId(eid)})
-    if r.deleted_count == 0: raise HTTPException(404, "Employee not found")
-    return {"message": "Employee deleted"}
+    employee = await db.employees.find_one({"_id": ObjectId(eid)})
+    if not employee:
+        raise HTTPException(404, "Employee not found")
+    await _delete_employee_records(eid)
+    return {"message": "Employee and related HR data deleted"}
+
+@app.post("/api/internal/purge-user")
+async def purge_user(
+    body: PurgeUserRequest,
+    x_internal_secret: Optional[str] = Header(None, alias="X-Internal-Secret"),
+):
+    _verify_internal(x_internal_secret)
+    employee = await db.employees.find_one({"email": body.email})
+    if not employee:
+        return {"employees_deleted": 0, "attendance_deleted": 0, "leaves_deleted": 0}
+
+    eid = str(employee["_id"])
+    attendance_deleted = (await db.attendance.delete_many({"employee_id": eid})).deleted_count
+    leaves_deleted = (await db.leave_requests.delete_many({"employee_id": eid})).deleted_count
+    employees_deleted = (await db.employees.delete_one({"_id": employee["_id"]})).deleted_count
+    return {
+        "employees_deleted": employees_deleted,
+        "attendance_deleted": attendance_deleted,
+        "leaves_deleted": leaves_deleted,
+    }
 
 # ── Attendance ─────────────────────────────────────────────────────────────────
 

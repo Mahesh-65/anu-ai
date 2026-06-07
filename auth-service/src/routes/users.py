@@ -9,6 +9,7 @@ from src.models.schemas import UserCreate, UserCreateResponse, UserResponse, Use
 from src.utils.auth_deps import PermissionChecker, get_current_user
 from src.utils.role_hierarchy import ROLE_CREATABLE, can_manage_role, is_visible_user
 from src.utils.security import hash_password
+from src.utils.user_cleanup import purge_user_data
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -230,5 +231,9 @@ async def delete_user(
 
     _ensure_can_manage(current_user, user, "delete")
 
+    cleanup = await purge_user_data(user)
     await user_col.delete_one({"_id": ObjectId(user_id)})
-    return {"message": "User deleted successfully"}
+    return {
+        "message": "User and related data deleted successfully.",
+        "cleanup": cleanup,
+    }

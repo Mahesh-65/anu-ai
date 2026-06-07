@@ -18,5 +18,13 @@ class Settings:
     JWT_ACCESS_EXPIRY_MINUTES: int = int(os.getenv("JWT_ACCESS_EXPIRY_MINUTES", "15"))
     JWT_REFRESH_EXPIRY_DAYS: int = int(os.getenv("JWT_REFRESH_EXPIRY_DAYS", "7"))
 
+    # Downstream services for cascade delete on user removal
+    HR_SERVICE_URL: str = os.getenv("HR_SERVICE_URL", "http://localhost:8002")
+    PROJECT_SERVICE_URL: str = os.getenv("PROJECT_SERVICE_URL", "http://localhost:8003")
+    FINANCE_SERVICE_URL: str = os.getenv("FINANCE_SERVICE_URL", "http://localhost:8004")
+    INTERNAL_SERVICE_SECRET: str = (
+        os.getenv("INTERNAL_SERVICE_SECRET") or "organistation_internal_secret"
+    ).strip()
+
 
 settings = Settings()

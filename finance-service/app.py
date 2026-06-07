@@ -2,7 +2,7 @@ import os
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Optional
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel
@@ -15,6 +15,7 @@ MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
 DB_NAME     = os.getenv("DB_NAME", "organistation_finance")
 PORT        = int(os.getenv("PORT", "8004"))
 HOST        = os.getenv("HOST", "0.0.0.0")
+INTERNAL_SERVICE_SECRET = os.getenv("INTERNAL_SERVICE_SECRET", "organistation_internal_secret")
 
 client = None
 db     = None
@@ -77,6 +78,22 @@ class InvoiceUpdate(BaseModel):
     status:      Optional[str]   = None
     description: Optional[str]   = None
     due_date:    Optional[str]   = None
+
+class PurgeUserRequest(BaseModel):
+    email:      str
+    first_name: Optional[str] = None
+    last_name:  Optional[str] = None
+
+def _verify_internal(x_internal_secret: Optional[str]):
+    if x_internal_secret != INTERNAL_SERVICE_SECRET:
+        raise HTTPException(403, "Forbidden")
+
+def _user_match(email: str, first_name: Optional[str], last_name: Optional[str]):
+    values = [email]
+    full_name = " ".join(part for part in [first_name, last_name] if part).strip()
+    if full_name:
+        values.append(full_name)
+    return {"$in": values}
 
 # ── Health ─────────────────────────────────────────────────────────────────────
 
@@ -184,6 +201,16 @@ async def delete_invoice(iid: str):
     r = await db.invoices.delete_one({"_id": ObjectId(iid)})
     if r.deleted_count == 0: raise HTTPException(404, "Invoice not found")
     return {"message": "Invoice deleted"}
+
+@app.post("/api/internal/purge-user")
+async def purge_user(
+    body: PurgeUserRequest,
+    x_internal_secret: Optional[str] = Header(None, alias="X-Internal-Secret"),
+):
+    _verify_internal(x_internal_secret)
+    match = _user_match(body.email, body.first_name, body.last_name)
+    expenses_deleted = (await db.expenses.delete_many({"submitted_by": match})).deleted_count
+    return {"expenses_deleted": expenses_deleted}
 
 if __name__ == "__main__":
     import uvicorn

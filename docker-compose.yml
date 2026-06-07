@@ -23,6 +23,10 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       JWT_ACCESS_EXPIRY_MINUTES: 15
       JWT_REFRESH_EXPIRY_DAYS: 7
+      HR_SERVICE_URL: http://hr:8002
+      PROJECT_SERVICE_URL: http://projects:8003
+      FINANCE_SERVICE_URL: http://finance:8004
+      INTERNAL_SERVICE_SECRET: ${INTERNAL_SERVICE_SECRET:-organistation_internal_secret}
     depends_on:
       mongo:
         condition: service_healthy
@@ -49,6 +53,7 @@ services:
       HOST: 0.0.0.0
       MONGODB_URI: mongodb://mongo:27017
       DB_NAME: organistation_hr
+      INTERNAL_SERVICE_SECRET: ${INTERNAL_SERVICE_SECRET:-organistation_internal_secret}
     depends_on:
       mongo:
         condition: service_healthy
@@ -62,6 +67,7 @@ services:
       HOST: 0.0.0.0
       MONGODB_URI: mongodb://mongo:27017
       DB_NAME: organistation_projects
+      INTERNAL_SERVICE_SECRET: ${INTERNAL_SERVICE_SECRET:-organistation_internal_secret}
     depends_on:
       mongo:
         condition: service_healthy
@@ -75,6 +81,7 @@ services:
       HOST: 0.0.0.0
       MONGODB_URI: mongodb://mongo:27017
       DB_NAME: organistation_finance
+      INTERNAL_SERVICE_SECRET: ${INTERNAL_SERVICE_SECRET:-organistation_internal_secret}
     depends_on:
       mongo:
         condition: service_healthy

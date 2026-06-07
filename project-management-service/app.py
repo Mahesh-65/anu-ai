@@ -2,7 +2,7 @@ import os
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import List, Optional
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel
@@ -15,6 +15,7 @@ MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
 DB_NAME     = os.getenv("DB_NAME", "organistation_projects")
 PORT        = int(os.getenv("PORT", "8003"))
 HOST        = os.getenv("HOST", "0.0.0.0")
+INTERNAL_SERVICE_SECRET = os.getenv("INTERNAL_SERVICE_SECRET", "organistation_internal_secret")
 
 client = None
 db     = None
@@ -86,6 +87,28 @@ class TicketUpdate(BaseModel):
     status:      Optional[str] = None
     priority:    Optional[str] = None
     assignee:    Optional[str] = None
+
+class PurgeUserRequest(BaseModel):
+    email:      str
+    first_name: Optional[str] = None
+    last_name:  Optional[str] = None
+
+def _verify_internal(x_internal_secret: Optional[str]):
+    if x_internal_secret != INTERNAL_SERVICE_SECRET:
+        raise HTTPException(403, "Forbidden")
+
+def _user_match(email: str, first_name: Optional[str], last_name: Optional[str]):
+    values = [email]
+    full_name = " ".join(part for part in [first_name, last_name] if part).strip()
+    if full_name:
+        values.append(full_name)
+    return {"$in": values}
+
+async def _delete_project_tree(pid: str):
+    await db.tasks.delete_many({"project_id": pid})
+    await db.milestones.delete_many({"project_id": pid})
+    await db.tickets.delete_many({"project_id": pid})
+    await db.projects.delete_one({"_id": ObjectId(pid)})
 
 # ── Health ─────────────────────────────────────────────────────────────────────
 
@@ -198,6 +221,30 @@ async def delete_ticket(tid: str):
     r = await db.tickets.delete_one({"_id": ObjectId(tid)})
     if r.deleted_count == 0: raise HTTPException(404, "Ticket not found")
     return {"message": "Ticket deleted"}
+
+@app.post("/api/internal/purge-user")
+async def purge_user(
+    body: PurgeUserRequest,
+    x_internal_secret: Optional[str] = Header(None, alias="X-Internal-Secret"),
+):
+    _verify_internal(x_internal_secret)
+    match = _user_match(body.email, body.first_name, body.last_name)
+
+    projects_deleted = 0
+    async for project in db.projects.find({"owner": match}):
+        await _delete_project_tree(str(project["_id"]))
+        projects_deleted += 1
+
+    tasks_deleted = (await db.tasks.delete_many({"assignee": match})).deleted_count
+    tickets_deleted = (await db.tickets.delete_many({
+        "$or": [{"assignee": match}, {"reporter": match}]
+    })).deleted_count
+
+    return {
+        "projects_deleted": projects_deleted,
+        "tasks_deleted": tasks_deleted,
+        "tickets_deleted": tickets_deleted,
+    }
 
 if __name__ == "__main__":
     import uvicorn
