@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Cpu, Mail, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function LoginPage() {
   const { login }   = useAuth();
   const navigate    = useNavigate();
-  const [form, setForm]       = useState({ email: 'admin@organistation.local', password: 'Admin@123' });
+  const [form, setForm]       = useState({ email: '', password: '' });
   const [error, setError]     = useState('');
   const [loading, setLoading] = useState(false);
   const [showPw, setShowPw]   = useState(false);
@@ -101,10 +101,10 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div style={{ marginTop: 24, padding: 14, background: 'var(--bg-base)', borderRadius: 8, border: '1px solid var(--border)' }}>
-          <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>Default super admin credentials:</p>
-          <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>admin@organistation.local / Admin@123</p>
-        </div>
+        <p style={{ marginTop: 20, fontSize: 13, textAlign: 'center', color: 'var(--text-secondary)' }}>
+          Don&apos;t have an account?{' '}
+          <Link to="/register" style={{ color: 'var(--accent)', fontWeight: 600 }}>Create account</Link>
+        </p>
       </div>
     </div>
   );

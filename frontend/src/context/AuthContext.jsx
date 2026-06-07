@@ -30,6 +30,11 @@ export function AuthProvider({ children }) {
     return me;
   };
 
+  const register = async ({ email, password, first_name, last_name }) => {
+    await authApi.register({ email, password, first_name, last_name, role: 'EMPLOYEE' });
+    return login(email, password);
+  };
+
   const logout = async () => {
     try {
       const refresh = localStorage.getItem('refresh_token');
@@ -43,7 +48,7 @@ export function AuthProvider({ children }) {
   const hasRole       = (role) => user?.role === role;
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, hasPermission, hasRole }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, hasPermission, hasRole }}>
       {children}
     </AuthContext.Provider>
   );

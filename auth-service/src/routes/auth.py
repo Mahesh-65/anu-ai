@@ -15,6 +15,9 @@ async def register(user_data: UserRegister):
     user_col = get_collection("users")
     role_col = get_collection("roles")
 
+    # Public self-registration is limited to EMPLOYEE
+    role_name = "EMPLOYEE"
+
     # Check if user already exists
     existing_user = await user_col.find_one({"email": user_data.email})
     if existing_user:
@@ -24,11 +27,11 @@ async def register(user_data: UserRegister):
         )
 
     # Validate role
-    role = await role_col.find_one({"name": user_data.role})
+    role = await role_col.find_one({"name": role_name})
     if not role:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Role '{user_data.role}' does not exist."
+            detail=f"Role '{role_name}' does not exist."
         )
 
     # Hash password and insert
@@ -39,7 +42,7 @@ async def register(user_data: UserRegister):
         "hashed_password": hashed,
         "first_name": user_data.first_name,
         "last_name": user_data.last_name,
-        "role": user_data.role,
+        "role": role_name,
         "status": "active",
         "created_at": now,
         "updated_at": now

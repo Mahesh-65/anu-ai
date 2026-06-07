@@ -12,8 +12,8 @@ class Settings:
     MONGODB_URI: str = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
     DB_NAME: str = os.getenv("DB_NAME", "organistation_auth")
 
-    # JWT
-    JWT_SECRET: str = os.getenv("JWT_SECRET", "default_secret_change_me")
+    # JWT — default must match gateway/src/app.js when JWT_SECRET is unset or empty
+    JWT_SECRET: str = (os.getenv("JWT_SECRET") or "").strip() or "organistation_super_secret_key_change_in_production_2024"
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_EXPIRY_MINUTES: int = int(os.getenv("JWT_ACCESS_EXPIRY_MINUTES", "15"))
     JWT_REFRESH_EXPIRY_DAYS: int = int(os.getenv("JWT_REFRESH_EXPIRY_DAYS", "7"))

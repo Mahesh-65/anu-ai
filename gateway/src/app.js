@@ -7,7 +7,7 @@ const jwt = require('jsonwebtoken');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const JWT_SECRET = process.env.JWT_SECRET || 'organistation_super_secret_key_change_in_production_2024';
+const JWT_SECRET = (process.env.JWT_SECRET || '').trim() || 'organistation_super_secret_key_change_in_production_2024';
 
 // Enable CORS
 app.use(cors());

@@ -72,7 +72,16 @@ async def seed_database():
             )
 
     # 3. Seed Default Super Admin User
-    admin_email = "admin@organistation.local"
+    admin_email = "admin@organistation.com"
+    for legacy_email in ("admin@organistation.local", "admin@anu.ai"):
+        legacy_user = await user_col.find_one({"email": legacy_email})
+        if legacy_user:
+            await user_col.update_one(
+                {"email": legacy_email},
+                {"$set": {"email": admin_email, "updated_at": datetime.datetime.utcnow()}}
+            )
+            print(f"[Seeder] Migrated admin email from {legacy_email} to {admin_email}")
+
     existing_admin = await user_col.find_one({"email": admin_email})
     if not existing_admin:
         hashed = hash_password("Admin@123")

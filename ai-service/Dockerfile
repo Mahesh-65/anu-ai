@@ -10,6 +10,8 @@ WORKDIR /app
 RUN useradd --create-home appuser && chown appuser:appuser /app
 COPY --from=build /usr/local /usr/local
 COPY --chown=appuser:appuser src/ ./src/
-USER appuser
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
 EXPOSE 8000
+ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["python", "-m", "uvicorn", "src.app:app", "--host", "0.0.0.0", "--port", "8000"]

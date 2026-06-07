@@ -196,7 +196,7 @@ Expected:
 ```bash
 curl -X POST http://localhost:3000/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@organistation.local","password":"Admin@123"}'
+  -d '{"email":"admin@organistation.com","password":"Admin@123"}'
 ```
 
 Expected: JSON with `access_token` and `refresh_token`.
@@ -213,7 +213,7 @@ Login:
 
 | Field | Value |
 |-------|-------|
-| Email | `admin@organistation.local` |
+| Email | `admin@organistation.com` |
 | Password | `Admin@123` |
 
 ### 7.4 Check individual service logs

@@ -1,5 +1,16 @@
 const BASE = '/api';
 
+function formatApiError(err, fallback = 'Request failed') {
+  if (!err) return fallback;
+  if (typeof err.detail === 'string') return err.detail;
+  if (Array.isArray(err.detail)) {
+    return err.detail.map((e) => e.msg || JSON.stringify(e)).join('. ');
+  }
+  if (typeof err.message === 'string') return err.message;
+  if (typeof err.detail === 'object') return JSON.stringify(err.detail);
+  return fallback;
+}
+
 function getToken() {
   return localStorage.getItem('access_token');
 }
@@ -44,7 +55,7 @@ async function request(path, options = {}, retry = true) {
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(err.detail || 'Request failed');
+    throw new Error(formatApiError(err, res.statusText));
   }
 
   if (res.status === 204) return null;
