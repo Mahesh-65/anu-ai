@@ -99,7 +99,7 @@ export default function AIPage() {
               <Brain size={18} style={{ color:'#fff' }}/>
             </div>
             <div>
-              <div style={{ fontWeight:600, fontSize:14 }}>Anu AI — RAG Assistant</div>
+              <div style={{ fontWeight:600, fontSize:14 }}>OrganiStation — RAG Assistant</div>
               <div style={{ fontSize:11, color: status?.status==='healthy' ? 'var(--success)' : 'var(--danger)' }}>
                 ● {status?.llm_model ?? 'Connecting...'} {status?.llm_provider ? `(${status.llm_provider})` : ''}
               </div>

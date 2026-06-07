@@ -1,7 +1,7 @@
 {
-  "name": "anu-ai-gateway",
+  "name": "organistation-gateway",
   "version": "1.0.0",
-  "description": "Node.js Gateway and static content web server for Anu AI",
+  "description": "Node.js Gateway and static content web server for OrganiStation",
   "main": "src/app.js",
   "scripts": {
     "start": "node src/app.js",
@@ -17,6 +17,6 @@
   "devDependencies": {
     "nodemon": "^3.1.2"
   },
-  "author": "Anu AI Team",
+  "author": "OrganiStation Team",
   "license": "ISC"
 }

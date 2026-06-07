@@ -49,7 +49,7 @@ export default function AppLayout({ children, pageTitle }) {
       <aside className="sidebar">
         <div className="sidebar-logo">
           <div className="sidebar-logo-icon"><Cpu size={18} /></div>
-          <div className="sidebar-logo-text">Anu <span>AI</span></div>
+          <div className="sidebar-logo-text">Organi<span>Station</span></div>
         </div>
 
         <nav className="sidebar-nav">

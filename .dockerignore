@@ -1,0 +1,14 @@
+.git
+.gitignore
+**/.env
+**/.env.*
+**/__pycache__
+**/*.py[cod]
+**/.venv
+**/venv
+**/.pytest_cache
+**/chroma_db
+**/temp_uploads
+**/node_modules
+**/*.md
+.vscode

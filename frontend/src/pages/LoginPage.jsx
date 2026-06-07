@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 export default function LoginPage() {
   const { login }   = useAuth();
   const navigate    = useNavigate();
-  const [form, setForm]       = useState({ email: 'admin@anu.ai', password: 'Admin@123' });
+  const [form, setForm]       = useState({ email: 'admin@organistation.local', password: 'Admin@123' });
   const [error, setError]     = useState('');
   const [loading, setLoading] = useState(false);
   const [showPw, setShowPw]   = useState(false);
@@ -36,7 +36,7 @@ export default function LoginPage() {
             <Cpu size={18} />
           </div>
           <div>
-            <div className="sidebar-logo-text">Anu <span>AI</span></div>
+            <div className="sidebar-logo-text">Organi<span>Station</span></div>
             <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Enterprise Platform</div>
           </div>
         </div>
@@ -103,7 +103,7 @@ export default function LoginPage() {
 
         <div style={{ marginTop: 24, padding: 14, background: 'var(--bg-base)', borderRadius: 8, border: '1px solid var(--border)' }}>
           <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>Default super admin credentials:</p>
-          <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>admin@anu.ai / Admin@123</p>
+          <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>admin@organistation.local / Admin@123</p>
         </div>
       </div>
     </div>

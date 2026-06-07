@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
-DB_NAME     = os.getenv("DB_NAME", "anu_finance")
+DB_NAME     = os.getenv("DB_NAME", "organistation_finance")
 PORT        = int(os.getenv("PORT", "8004"))
 HOST        = os.getenv("HOST", "0.0.0.0")
 
@@ -31,7 +31,7 @@ async def lifespan(app: FastAPI):
     yield
     client.close()
 
-app = FastAPI(title="Anu AI – Finance Service", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="OrganiStation – Finance Service", version="1.0.0", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 def oid(doc):

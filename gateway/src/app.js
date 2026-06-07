@@ -7,7 +7,7 @@ const jwt = require('jsonwebtoken');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const JWT_SECRET = process.env.JWT_SECRET || 'anu_ai_super_secret_key_change_in_production_2024';
+const JWT_SECRET = process.env.JWT_SECRET || 'organistation_super_secret_key_change_in_production_2024';
 
 // Enable CORS
 app.use(cors());
@@ -146,7 +146,7 @@ app.get('*', (req, res) => {
 
 app.listen(PORT, () => {
     console.log(`=================================================`);
-    console.log(`  Anu AI Gateway is active at: http://localhost:${PORT}`);
+    console.log(`  OrganiStation Gateway is active at: http://localhost:${PORT}`);
     console.log(`  Auth Service proxy: ${process.env.AUTH_SERVICE_URL}`);
     console.log(`  AI Service proxy: ${process.env.AI_SERVICE_URL}`);
     console.log(`=================================================`);

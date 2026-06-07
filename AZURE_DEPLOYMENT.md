@@ -1,6 +1,8 @@
-# Deploying Anu AI on Microsoft Azure (Microservices)
+# Deploying OrganiStation on Microsoft Azure (Microservices)
 
-This guide walks through deploying **Anu AI** as a microservices application on Azure. The stack includes five Python (FastAPI) services, a Node.js API gateway, a React frontend, and MongoDB.
+> **Production architecture, Foundry, Cosmos DB, security, and CI/CD:** see [`AZURE_PRODUCTION_GUIDE.md`](./AZURE_PRODUCTION_GUIDE.md).
+
+This guide walks through deploying **OrganiStation** as a microservices application on Azure. The stack includes five Python (FastAPI) services, a Node.js API gateway, a React frontend, and MongoDB.
 
 | Component | Technology | Default port (local) |
 |-----------|------------|----------------------|
@@ -67,20 +69,20 @@ Set variables used throughout this guide (adjust names and region):
 
 ```bash
 # Bash / Git Bash / WSL
-export RESOURCE_GROUP="rg-anu-ai-prod"
+export RESOURCE_GROUP="rg-organistation-prod"
 export LOCATION="australiaeast"          # pick a region close to users
-export ACR_NAME="anuairegistry"          # globally unique, alphanumeric only
-export ENV_NAME="cae-anu-ai-prod"        # Container Apps environment
-export KV_NAME="kv-anu-ai-prod"          # Key Vault name (globally unique)
+export ACR_NAME="organistationregistry"          # globally unique, alphanumeric only
+export ENV_NAME="cae-organistation-prod"        # Container Apps environment
+export KV_NAME="kv-organistation-prod"          # Key Vault name (globally unique)
 ```
 
 ```powershell
 # PowerShell
-$RESOURCE_GROUP = "rg-anu-ai-prod"
+$RESOURCE_GROUP = "rg-organistation-prod"
 $LOCATION = "australiaeast"
-$ACR_NAME = "anuairegistry"
-$ENV_NAME = "cae-anu-ai-prod"
-$KV_NAME = "kv-anu-ai-prod"
+$ACR_NAME = "organistationregistry"
+$ENV_NAME = "cae-organistation-prod"
+$KV_NAME = "kv-organistation-prod"
 ```
 
 ---
@@ -103,7 +105,7 @@ Auth, HR, project management, and finance services use MongoDB (`MONGODB_URI`, `
 
 ```bash
 az cosmosdb create \
-  --name "cosmos-anu-ai-prod" \
+  --name "cosmos-organistation-prod" \
   --resource-group $RESOURCE_GROUP \
   --kind MongoDB \
   --server-version "4.2" \
@@ -111,31 +113,31 @@ az cosmosdb create \
   --locations regionName=$LOCATION failoverPriority=0 isZoneRedundant=False
 
 az cosmosdb mongodb database create \
-  --account-name "cosmos-anu-ai-prod" \
+  --account-name "cosmos-organistation-prod" \
   --resource-group $RESOURCE_GROUP \
-  --name anu_auth
+  --name organistation_auth
 
 az cosmosdb mongodb database create \
-  --account-name "cosmos-anu-ai-prod" \
+  --account-name "cosmos-organistation-prod" \
   --resource-group $RESOURCE_GROUP \
-  --name anu_hr
+  --name organistation_hr
 
 az cosmosdb mongodb database create \
-  --account-name "cosmos-anu-ai-prod" \
+  --account-name "cosmos-organistation-prod" \
   --resource-group $RESOURCE_GROUP \
-  --name anu_projects
+  --name organistation_projects
 
 az cosmosdb mongodb database create \
-  --account-name "cosmos-anu-ai-prod" \
+  --account-name "cosmos-organistation-prod" \
   --resource-group $RESOURCE_GROUP \
-  --name anu_finance
+  --name organistation_finance
 ```
 
 Get the connection string:
 
 ```bash
 az cosmosdb keys list \
-  --name "cosmos-anu-ai-prod" \
+  --name "cosmos-organistation-prod" \
   --resource-group $RESOURCE_GROUP \
   --type connection-strings \
   --query "connectionStrings[0].connectionString" -o tsv
@@ -163,71 +165,30 @@ Note the login server: `$ACR_NAME.azurecr.io`.
 
 ---
 
-## Step 4 — Add Dockerfiles (required for container deploy)
+## Step 4 — Dockerfiles (multistage)
 
-The repository includes placeholder Dockerfiles. Replace or fill them before building. Example patterns:
+Each microservice uses a **two-stage** Python build (`builder` → `runtime`) or a **three-stage** gateway build (`frontend-builder` → `deps` → `runtime`). Images run as a non-root `app` user and include health checks.
 
-### Python microservice (auth, hr, projects, finance)
+| Service | Dockerfile | Build context | Port |
+|---------|------------|---------------|------|
+| Auth | `auth-service/Dockerfile` | `./auth-service` | 8001 |
+| AI | `ai-service/Dockerfile` | `./ai-service` | 8000 |
+| HR | `hr-service/Dockerfile` | `./hr-service` | 8002 |
+| Projects | `project-management-service/Dockerfile` | `./project-management-service` | 8003 |
+| Finance | `finance-service/Dockerfile` | `./finance-service` | 8004 |
+| Gateway | `gateway/Dockerfile` | `./gateway` | 3000 |
 
-**`auth-service/Dockerfile`** (run from `auth-service` directory):
+### Python services (pattern)
 
-```dockerfile
-FROM python:3.11-slim
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-COPY . .
-ENV PYTHONUNBUFFERED=1
-EXPOSE 8001
-CMD ["python", "-m", "uvicorn", "src.app:app", "--host", "0.0.0.0", "--port", "8001"]
-```
-
-**`hr-service/Dockerfile`**, **`project-management-service/Dockerfile`**, **`finance-service/Dockerfile`** (adjust port):
-
-```dockerfile
-FROM python:3.11-slim
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-COPY . .
-ENV PYTHONUNBUFFERED=1
-EXPOSE 8002
-CMD ["python", "-m", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8002"]
-```
-
-Use ports `8003` and `8004` for project-management and finance respectively.
-
-### AI service
-
-```dockerfile
-FROM python:3.11-slim
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-COPY . .
-ENV PYTHONUNBUFFERED=1
-EXPOSE 8000
-VOLUME ["/app/chroma_db"]
-CMD ["python", "-m", "uvicorn", "src.app:app", "--host", "0.0.0.0", "--port", "8000"]
-```
-
-Mount **Azure Files** to `/app/chroma_db` in Container Apps if you need persistent vector storage.
+Stage 1 installs dependencies; stage 2 copies `/usr/local` and application code into `python:3.11-slim`.
 
 ### Gateway
 
-**`gateway/Dockerfile`**:
+Stage 1 installs production npm dependencies; stage 2 runs as the built-in `node` user. Build the frontend separately and copy `frontend/dist/*` into `gateway/public/` before building the gateway image, or deploy the frontend separately (see Step 10).
 
-```dockerfile
-FROM node:20-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --omit=dev
-COPY . .
-EXPOSE 3000
-CMD ["node", "src/app.js"]
+```bash
+docker build -t organistation-gateway:latest ./gateway
 ```
-
-Build the frontend and copy into `gateway/public` before building the gateway image (production), or deploy the frontend separately (see Step 10).
 
 ---
 
@@ -237,34 +198,34 @@ From the repository root:
 
 ```bash
 # Auth
-docker build -t $ACR_NAME.azurecr.io/anu-auth:latest ./auth-service
-docker push $ACR_NAME.azurecr.io/anu-auth:latest
+docker build -t $ACR_NAME.azurecr.io/organistation-auth:latest ./auth-service
+docker push $ACR_NAME.azurecr.io/organistation-auth:latest
 
 # AI
-docker build -t $ACR_NAME.azurecr.io/anu-ai:latest ./ai-service
-docker push $ACR_NAME.azurecr.io/anu-ai:latest
+docker build -t $ACR_NAME.azurecr.io/organistation-ai:latest ./ai-service
+docker push $ACR_NAME.azurecr.io/organistation-ai:latest
 
 # HR
-docker build -t $ACR_NAME.azurecr.io/anu-hr:latest ./hr-service
-docker push $ACR_NAME.azurecr.io/anu-hr:latest
+docker build -t $ACR_NAME.azurecr.io/organistation-hr:latest ./hr-service
+docker push $ACR_NAME.azurecr.io/organistation-hr:latest
 
 # Projects
-docker build -t $ACR_NAME.azurecr.io/anu-projects:latest ./project-management-service
-docker push $ACR_NAME.azurecr.io/anu-projects:latest
+docker build -t $ACR_NAME.azurecr.io/organistation-projects:latest ./project-management-service
+docker push $ACR_NAME.azurecr.io/organistation-projects:latest
 
 # Finance
-docker build -t $ACR_NAME.azurecr.io/anu-finance:latest ./finance-service
-docker push $ACR_NAME.azurecr.io/anu-finance:latest
+docker build -t $ACR_NAME.azurecr.io/organistation-finance:latest ./finance-service
+docker push $ACR_NAME.azurecr.io/organistation-finance:latest
 
 # Gateway (after frontend build is copied to gateway/public, if using single entry point)
-docker build -t $ACR_NAME.azurecr.io/anu-gateway:latest ./gateway
-docker push $ACR_NAME.azurecr.io/anu-gateway:latest
+docker build -t $ACR_NAME.azurecr.io/organistation-gateway:latest ./gateway
+docker push $ACR_NAME.azurecr.io/organistation-gateway:latest
 ```
 
 Enable ACR tasks for cloud builds (optional):
 
 ```bash
-az acr build --registry $ACR_NAME --image anu-auth:latest ./auth-service
+az acr build --registry $ACR_NAME --image organistation-auth:latest ./auth-service
 ```
 
 ---
@@ -306,7 +267,7 @@ Optional: integrate with a **Log Analytics workspace** (recommended for Applicat
 ```bash
 az monitor log-analytics workspace create \
   --resource-group $RESOURCE_GROUP \
-  --workspace-name "law-anu-ai-prod"
+  --workspace-name "law-organistation-prod"
 
 # Pass --logs-workspace-id and --logs-workspace-key when creating the environment
 ```
@@ -326,10 +287,10 @@ ACR_PASSWORD=$(az acr credential show --name $ACR_NAME --query "passwords[0].val
 
 ```bash
 az containerapp create \
-  --name "ca-anu-auth" \
+  --name "ca-organistation-auth" \
   --resource-group $RESOURCE_GROUP \
   --environment $ENV_NAME \
-  --image "$ACR_NAME.azurecr.io/anu-auth:latest" \
+  --image "$ACR_NAME.azurecr.io/organistation-auth:latest" \
   --registry-server "$ACR_NAME.azurecr.io" \
   --registry-username $ACR_USERNAME \
   --registry-password $ACR_PASSWORD \
@@ -342,7 +303,7 @@ az containerapp create \
     PORT=8001 \
     HOST=0.0.0.0 \
     MONGODB_URI=secretref:mongodb-uri \
-    DB_NAME=anu_auth \
+    DB_NAME=organistation_auth \
     JWT_SECRET=secretref:jwt-secret \
     JWT_ACCESS_EXPIRY_MINUTES=15 \
     JWT_REFRESH_EXPIRY_DAYS=7
@@ -353,7 +314,7 @@ For production, bind secrets from Key Vault using [Container Apps secrets](https
 Record the internal FQDN:
 
 ```bash
-AUTH_FQDN=$(az containerapp show --name ca-anu-auth --resource-group $RESOURCE_GROUP --query properties.configuration.ingress.fqdn -o tsv)
+AUTH_FQDN=$(az containerapp show --name ca-organistation-auth --resource-group $RESOURCE_GROUP --query properties.configuration.ingress.fqdn -o tsv)
 echo "https://$AUTH_FQDN"
 ```
 
@@ -363,9 +324,9 @@ Repeat `az containerapp create` for each service with:
 
 | App name | Image | Port | DB_NAME |
 |----------|-------|------|---------|
-| `ca-anu-hr` | `anu-hr:latest` | 8002 | `anu_hr` |
-| `ca-anu-projects` | `anu-projects:latest` | 8003 | `anu_projects` |
-| `ca-anu-finance` | `anu-finance:latest` | 8004 | `anu_finance` |
+| `ca-organistation-hr` | `organistation-hr:latest` | 8002 | `organistation_hr` |
+| `ca-organistation-projects` | `organistation-projects:latest` | 8003 | `organistation_projects` |
+| `ca-organistation-finance` | `organistation-finance:latest` | 8004 | `organistation_finance` |
 
 Use `--ingress internal` for all backends.
 
@@ -373,10 +334,10 @@ Use `--ingress internal` for all backends.
 
 ```bash
 az containerapp create \
-  --name "ca-anu-ai" \
+  --name "ca-organistation-ai" \
   --resource-group $RESOURCE_GROUP \
   --environment $ENV_NAME \
-  --image "$ACR_NAME.azurecr.io/anu-ai:latest" \
+  --image "$ACR_NAME.azurecr.io/organistation-ai:latest" \
   --registry-server "$ACR_NAME.azurecr.io" \
   --registry-username $ACR_USERNAME \
   --registry-password $ACR_PASSWORD \
@@ -401,15 +362,15 @@ Attach Azure Files for `chroma_db` if embeddings must persist across restarts ([
 The gateway must reach internal services. Use each Container App’s **internal URL** (from the environment DNS suffix).
 
 ```bash
-AI_FQDN=$(az containerapp show --name ca-anu-ai --resource-group $RESOURCE_GROUP --query properties.configuration.ingress.fqdn -o tsv)
-HR_FQDN=$(az containerapp show --name ca-anu-hr --resource-group $RESOURCE_GROUP --query properties.configuration.ingress.fqdn -o tsv)
+AI_FQDN=$(az containerapp show --name ca-organistation-ai --resource-group $RESOURCE_GROUP --query properties.configuration.ingress.fqdn -o tsv)
+HR_FQDN=$(az containerapp show --name ca-organistation-hr --resource-group $RESOURCE_GROUP --query properties.configuration.ingress.fqdn -o tsv)
 # ... same for projects and finance
 
 az containerapp create \
-  --name "ca-anu-gateway" \
+  --name "ca-organistation-gateway" \
   --resource-group $RESOURCE_GROUP \
   --environment $ENV_NAME \
-  --image "$ACR_NAME.azurecr.io/anu-gateway:latest" \
+  --image "$ACR_NAME.azurecr.io/organistation-gateway:latest" \
   --registry-server "$ACR_NAME.azurecr.io" \
   --registry-username $ACR_USERNAME \
   --registry-password $ACR_PASSWORD \
@@ -432,7 +393,7 @@ az containerapp create \
 Get the public gateway URL:
 
 ```bash
-GATEWAY_URL=$(az containerapp show --name ca-anu-gateway --resource-group $RESOURCE_GROUP --query properties.configuration.ingress.fqdn -o tsv)
+GATEWAY_URL=$(az containerapp show --name ca-organistation-gateway --resource-group $RESOURCE_GROUP --query properties.configuration.ingress.fqdn -o tsv)
 echo "https://$GATEWAY_URL"
 ```
 
@@ -469,9 +430,9 @@ curl "https://$GATEWAY_URL/api/health"
 ```bash
 cd frontend && npm ci && npm run build
 cp -r dist/* ../gateway/public/
-docker build -t $ACR_NAME.azurecr.io/anu-gateway:latest ./gateway
-docker push $ACR_NAME.azurecr.io/anu-gateway:latest
-az containerapp update --name ca-anu-gateway --resource-group $RESOURCE_GROUP --image "$ACR_NAME.azurecr.io/anu-gateway:latest"
+docker build -t $ACR_NAME.azurecr.io/organistation-gateway:latest ./gateway
+docker push $ACR_NAME.azurecr.io/organistation-gateway:latest
+az containerapp update --name ca-organistation-gateway --resource-group $RESOURCE_GROUP --image "$ACR_NAME.azurecr.io/organistation-gateway:latest"
 ```
 
 Users then use only the gateway URL for UI and API.
@@ -496,7 +457,7 @@ Users then use only the gateway URL for UI and API.
 1. Enable **Application Insights** on the Container Apps environment.
 2. View logs:
    ```bash
-   az containerapp logs show --name ca-anu-gateway --resource-group $RESOURCE_GROUP --follow
+   az containerapp logs show --name ca-organistation-gateway --resource-group $RESOURCE_GROUP --follow
    ```
 3. Set alerts on HTTP 5xx rates, CPU/memory, and Cosmos DB RU consumption.
 
@@ -566,7 +527,7 @@ Default admin user (if seeded by auth service): confirm in `auth-service/src/uti
 |----------|-------------|
 | `PORT`, `HOST` | Server bind |
 | `MONGODB_URI` | Cosmos DB connection string |
-| `DB_NAME` | `anu_auth` |
+| `DB_NAME` | `organistation_auth` |
 | `JWT_SECRET` | Signing key |
 | `JWT_ACCESS_EXPIRY_MINUTES` | Access token TTL |
 | `JWT_REFRESH_EXPIRY_DAYS` | Refresh token TTL |
@@ -585,7 +546,7 @@ Default admin user (if seeded by auth service): confirm in `auth-service/src/uti
 |----------|-------------|
 | `PORT`, `HOST` | Server bind |
 | `MONGODB_URI` | Cosmos connection string |
-| `DB_NAME` | `anu_hr`, `anu_projects`, or `anu_finance` |
+| `DB_NAME` | `organistation_hr`, `organistation_projects`, or `organistation_finance` |
 
 ---
 
@@ -633,7 +594,7 @@ Open http://localhost:5173 — API calls proxy to http://localhost:3000.
 
 - [ ] All `.env` secrets in Key Vault, not in Git
 - [ ] Root `.gitignore` excludes `.env`, `node_modules`, `.venv`, `chroma_db`
-- [ ] Dockerfiles filled and images pushed to ACR
+- [ ] Multistage Dockerfiles present; images pushed to ACR
 - [ ] `JWT_SECRET` rotated and consistent (gateway + auth)
 - [ ] Backends use internal ingress; only gateway is public
 - [ ] Cosmos DB networking locked down

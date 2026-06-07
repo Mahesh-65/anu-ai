@@ -16,7 +16,7 @@ except ModuleNotFoundError:
 
 
 app = FastAPI(
-    title="Anu AI RAG Service",
+    title="OrganiStation RAG Service",
     description="Python FastAPI RAG Service using ChromaDB and Google Gemini API.",
     version="1.0.0"
 )

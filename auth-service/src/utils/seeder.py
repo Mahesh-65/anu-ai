@@ -72,7 +72,7 @@ async def seed_database():
             )
 
     # 3. Seed Default Super Admin User
-    admin_email = "admin@anu.ai"
+    admin_email = "admin@organistation.local"
     existing_admin = await user_col.find_one({"email": admin_email})
     if not existing_admin:
         hashed = hash_password("Admin@123")

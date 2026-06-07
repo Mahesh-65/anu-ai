@@ -10,7 +10,7 @@ class Settings:
 
     # MongoDB
     MONGODB_URI: str = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
-    DB_NAME: str = os.getenv("DB_NAME", "anu_auth")
+    DB_NAME: str = os.getenv("DB_NAME", "organistation_auth")
 
     # JWT
     JWT_SECRET: str = os.getenv("JWT_SECRET", "default_secret_change_me")

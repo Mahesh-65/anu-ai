@@ -1,0 +1,99 @@
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  auth:
+    build: ./auth-service
+    restart: unless-stopped
+    environment:
+      PORT: 8001
+      HOST: 0.0.0.0
+      MONGODB_URI: mongodb://mongo:27017
+      DB_NAME: organistation_auth
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ACCESS_EXPIRY_MINUTES: 15
+      JWT_REFRESH_EXPIRY_DAYS: 7
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  ai:
+    build: ./ai-service
+    restart: unless-stopped
+    environment:
+      PORT: 8000
+      HOST: 0.0.0.0
+      CHROMA_DB_PATH: /app/chroma_db
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+    volumes:
+      - chroma_data:/app/chroma_db
+
+  hr:
+    build: ./hr-service
+    restart: unless-stopped
+    environment:
+      PORT: 8002
+      HOST: 0.0.0.0
+      MONGODB_URI: mongodb://mongo:27017
+      DB_NAME: organistation_hr
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  projects:
+    build: ./project-management-service
+    restart: unless-stopped
+    environment:
+      PORT: 8003
+      HOST: 0.0.0.0
+      MONGODB_URI: mongodb://mongo:27017
+      DB_NAME: organistation_projects
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  finance:
+    build: ./finance-service
+    restart: unless-stopped
+    environment:
+      PORT: 8004
+      HOST: 0.0.0.0
+      MONGODB_URI: mongodb://mongo:27017
+      DB_NAME: organistation_finance
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  gateway:
+    build: ./gateway
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      JWT_SECRET: ${JWT_SECRET}
+      AUTH_SERVICE_URL: http://auth:8001
+      AI_SERVICE_URL: http://ai:8000
+      HR_SERVICE_URL: http://hr:8002
+      PROJECT_SERVICE_URL: http://projects:8003
+      FINANCE_SERVICE_URL: http://finance:8004
+    depends_on:
+      - auth
+      - ai
+      - hr
+      - projects
+      - finance
+
+volumes:
+  mongo_data:
+  chroma_data:

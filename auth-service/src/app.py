@@ -16,7 +16,7 @@ async def lifespan(app: FastAPI):
     await close_mongo_connection()
 
 app = FastAPI(
-    title="Anu AI - Authentication & Authorization Service",
+    title="OrganiStation - Authentication & Authorization Service",
     description="Identity management, RBAC, and JWT tokens",
     version="1.0.0",
     lifespan=lifespan
