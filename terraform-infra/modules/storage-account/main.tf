@@ -11,6 +11,5 @@ resource "azurerm_storage_account" "main" {
 resource "azurerm_storage_container" "tfstate" {
   count                 = var.create_backend_container ? 1 : 0
   name                  = "tfstate"
-  storage_account_name  = azurerm_storage_account.main.name
   container_access_type = "private"
 }
