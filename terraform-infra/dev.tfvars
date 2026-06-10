@@ -1,2 +1,2 @@
 environment = "dev"
-jwt_secret  = "dev-jwt-secret-replace-me"
+jwt_secret = "dev-jwt-secret-replace-me"
