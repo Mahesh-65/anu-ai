@@ -1,27 +1,8 @@
-output "appgw_vnet_id" {
-  value = azurerm_virtual_network.app_gateway.id
-}
+output "app_gw_vnet_id" { value = azurerm_virtual_network.app_gw_vnet.id }
+output "app_svc_vnet_id" { value = azurerm_virtual_network.app_svc_vnet.id }
+output "db_vnet_id" { value = azurerm_virtual_network.db_vnet.id }
 
-output "apps_vnet_id" {
-  value = azurerm_virtual_network.app_services.id
-}
-
-output "db_vnet_id" {
-  value = azurerm_virtual_network.database.id
-}
-
-output "appgw_subnet_id" {
-  value = azurerm_subnet.app_gateway.id
-}
-
-output "pe_apps_subnet_id" {
-  value = azurerm_subnet.private_endpoint_apps.id
-}
-
-output "vnet_integration_subnet_id" {
-  value = azurerm_subnet.vnet_integration.id
-}
-
-output "pe_db_subnet_id" {
-  value = azurerm_subnet.private_endpoint_db.id
-}
+output "app_gw_subnet_id" { value = azurerm_subnet.app_gw_subnet.id }
+output "app_svc_pe_subnet_id" { value = azurerm_subnet.app_svc_pe_subnet.id }
+output "app_svc_integration_subnet_id" { value = azurerm_subnet.app_svc_integration_subnet.id }
+output "db_pe_subnet_id" { value = azurerm_subnet.db_pe_subnet.id }

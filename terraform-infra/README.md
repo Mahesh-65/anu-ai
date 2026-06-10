@@ -1,79 +1,43 @@
-# OrganiStation Azure Infrastructure (Terraform)
+# OrganiStation Terraform Platform
 
-This repository contains the production-grade Terraform code for deploying the OrganiStation microservices architecture on Azure.
-
-## Architecture Overview
-
-- **Region**: southindia
-- **Resource Group**: Unified container for all environment resources.
-- **Networking**: High-security Hub-and-Spoke-style VNets with Peering.
-  - App Gateway VNet (`10.0.0.0/16`)
-  - App Services VNet (`10.1.0.0/16`)
-  - Database VNet (`10.2.0.0/16`)
-- **Security**: 
-  - Application Gateway WAF v2 for edge protection.
-  - Private Endpoints for Key Vault, Storage, and Cosmos DB.
-  - Managed Identities for all App Services.
-  - RBAC and Key Vault for secret management.
-- **Application Layer**: 6 Linux Web Apps for Containers running on a shared App Service Plan.
-- **Database**: Cosmos DB (Mongo API) with continuous backup and private access only.
-- **Monitoring**: Centralized Log Analytics and Application Insights.
-
-## Directory Structure
-
-```text
-terraform-infra/
-├── modules/
-│   ├── networking/           # VNets, Subnets, Peering, NSGs
-│   ├── application-gateway/  # WAF v2 Gateway
-│   ├── app-service/          # Linux Web App for Containers logic
-│   ├── cosmosdb/             # Mongo API Cosmos Account
-│   ├── ...                   # (Other modules as requested)
-├── main.tf                   # Root orchestration
-├── variables.tf              # Root variables
-├── dev.tfvars                # Environment specific vars
-└── ...
-```
+This repository contains the complete Terraform infrastructure for the OrganiStation microservices platform on Azure.
 
 ## Prerequisites
 
-1. Azure CLI authenticated.
-2. Terraform CLI installed.
-3. A Storage Account and Container created for the remote backend state.
+1.  **Azure Account**: An active Azure subscription (Free Account compatible).
+2.  **Terraform CLI**: Installed and configured.
+
+## Architecture
+
+*   **Single Resource Group**: All resources reside in one logical group.
+*   **Networking**: 3 isolated VNets (Gateway, App Services, Database) with Peering.
+*   **Storage**: Cosmos DB (MongoDB API) and Azure Blob Storage.
+*   **Compute**: Linux App Services running Docker Hub images (F1 Free Tier).
+*   **Access**: Application Gateway (Standard_v2) acts as the single public entry point.
+*   **Security**: Private Endpoints and Private DNS ensure internal traffic stays off the public internet.
 
 ## Deployment Instructions
 
-### 1. Initialize Backend
-Update `backend.tf` with your storage account details or provide them via command line:
-
+### 1. Initialize Terraform
 ```bash
-terraform init \
-  -backend-config="resource_group_name=<RG_NAME>" \
-  -backend-config="storage_account_name=<ST_NAME>" \
-  -backend-config="container_name=tfstate" \
-  -backend-config="key=dev.terraform.tfstate"
+cd terraform-infra
+terraform init
 ```
 
-### 2. Plan Deployment
-Use the environment-specific `.tfvars` file:
-
+### 2. Plan the Deployment (Development Environment)
 ```bash
 terraform plan -var-file="dev.tfvars"
 ```
 
-### 3. Apply Infrastructure
+### 3. Apply the Infrastructure
 ```bash
-terraform apply -var-file="dev.tfvars"
+terraform apply -var-file="dev.tfvars" -auto-approve
 ```
 
-## Resource Tagging
-All resources are automatically tagged with:
-- `Project`: OrganiStation
-- `Environment`: (from var)
-- `Owner`: DevOps
-- `CostCenter`: Engineering
+## Important Notes
 
-## Security Notes
-- No secrets are hardcoded; use `dev.tfvars` or environment variables (e.g., `TF_VAR_jwt_secret`).
-- All data services are locked down with Private Endpoints.
-- Public traffic is only allowed through the Application Gateway.
+*   **State Management**: This configuration uses **Local State**. Keep the `terraform.tfstate` file safe if you intend to manage these resources later.
+*   **Free Tier**: The infrastructure is optimized for Azure Free Accounts using F1 App Service Plans and Cosmos DB Free Tier.
+*   **Environment Variables**: All microservice communication and secrets are handled via App Service Environment Variables.
+*   **Internal URLs**: Services communicate using internal `.azurewebsites.net` FQDNs via Private DNS.
+*   **Gateway**: Only the Gateway (Frontend) is exposed via the Application Gateway Public IP.

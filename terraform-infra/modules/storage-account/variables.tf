@@ -1,19 +1,8 @@
-variable "resource_group_name" {
-  description = "The name of the resource group"
-  type        = string
-}
-
-variable "location" {
-  description = "The Azure region"
-  type        = string
-}
-
-variable "prefix" {
-  description = "Prefix for resources"
-  type        = string
-}
-
-variable "tags" {
-  description = "Resource tags"
-  type        = map(string)
+variable "resource_group_name" { type = string }
+variable "location" { type = string }
+variable "tags" { type = map(string) }
+variable "storage_account_name" { type = string }
+variable "create_backend_container" { 
+  type = bool 
+  default = false
 }

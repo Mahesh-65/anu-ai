@@ -1,19 +1,5 @@
-variable "resource_group_name" {
-  description = "The name of the resource group"
-  type        = string
-}
-
-variable "location" {
-  description = "The Azure region"
-  type        = string
-}
-
-variable "prefix" {
-  description = "Prefix for resources"
-  type        = string
-}
-
-variable "tags" {
-  description = "Resource tags"
-  type        = map(string)
-}
+variable "resource_group_name" { type = string }
+variable "location" { type = string }
+variable "tags" { type = map(string) }
+variable "environment" { type = string }
+variable "project_name" { type = string }

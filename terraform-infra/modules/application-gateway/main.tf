@@ -1,5 +1,5 @@
 resource "azurerm_public_ip" "main" {
-  name                = "${var.prefix}-appgw-pip"
+  name                = "app-gw-pip"
   resource_group_name = var.resource_group_name
   location            = var.location
   allocation_method   = "Static"
@@ -8,27 +8,29 @@ resource "azurerm_public_ip" "main" {
 }
 
 locals {
-  backend_address_pool_name      = "${var.prefix}-beap"
-  frontend_port_name             = "${var.prefix}-feport"
-  frontend_ip_configuration_name = "${var.prefix}-feip"
-  http_setting_name              = "${var.prefix}-be-htst"
-  listener_name                  = "${var.prefix}-httplstn"
-  request_routing_rule_name      = "${var.prefix}-rqrt"
+  backend_address_pool_name      = "frontend-be-pool"
+  frontend_port_name             = "frontend-port"
+  frontend_ip_configuration_name = "frontend-ip-config"
+  http_setting_name              = "frontend-be-htst"
+  listener_name                  = "frontend-listener"
+  request_routing_rule_name      = "frontend-routing-rule"
+  probe_name                     = "frontend-probe"
 }
 
 resource "azurerm_application_gateway" "main" {
-  name                = "${var.prefix}-appgw"
+  name                = var.name
   resource_group_name = var.resource_group_name
   location            = var.location
+  tags                = var.tags
 
   sku {
-    name     = "WAF_v2"
-    tier     = "WAF_v2"
-    capacity = 2
+    name     = "Standard_v2"
+    tier     = "Standard_v2"
+    capacity = 1
   }
 
   gateway_ip_configuration {
-    name      = "my-gateway-ip-configuration"
+    name      = "gateway-ip-config"
     subnet_id = var.subnet_id
   }
 
@@ -50,9 +52,10 @@ resource "azurerm_application_gateway" "main" {
   backend_http_settings {
     name                  = local.http_setting_name
     cookie_based_affinity = "Disabled"
-    port                  = 80
+    port                  = 3000
     protocol              = "Http"
     request_timeout       = 60
+    probe_name            = local.probe_name
     pick_host_name_from_backend_address = true
   }
 
@@ -63,6 +66,16 @@ resource "azurerm_application_gateway" "main" {
     protocol                       = "Http"
   }
 
+  probe {
+    name                = local.probe_name
+    protocol            = "Http"
+    path                = "/health"
+    interval            = 30
+    timeout             = 30
+    unhealthy_threshold = 3
+    pick_host_name_from_backend_http_settings = true
+  }
+
   request_routing_rule {
     name                       = local.request_routing_rule_name
     rule_type                  = "Basic"
@@ -71,13 +84,4 @@ resource "azurerm_application_gateway" "main" {
     backend_http_settings_name = local.http_setting_name
     priority                   = 100
   }
-
-  waf_configuration {
-    enabled          = true
-    firewall_mode    = "Prevention"
-    rule_set_type    = "OWASP"
-    rule_set_version = "3.2"
-  }
-
-  tags = var.tags
 }
