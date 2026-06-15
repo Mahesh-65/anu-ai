@@ -2,8 +2,8 @@
 global:
   azure:
     tenantId: "YOUR_TENANT_ID"
-    keyvaultName: "YOUR_KEYVAULT_NAME"
-    storageAccountName: "YOUR_STORAGE_ACCOUNT"
+    keyvaultName: "Mahesh-KeyV"
+    storageAccountName: "maheshstoracc"
     identityClientId: "YOUR_USER_ASSIGNED_IDENTITY_CLIENT_ID"
     # Container Registry
     registryServer: "organistationacr.azurecr.io"
