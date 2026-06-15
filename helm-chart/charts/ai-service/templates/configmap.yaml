@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.name }}-config
+data:
+  STORAGE_ACCOUNT_NAME: {{ .Values.global.azure.storageAccountName | quote }}
+  STORAGE_CONTAINER_NAME: {{ .Values.storage.containerName | quote }}

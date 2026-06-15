@@ -6,6 +6,7 @@ import chromadb
 from chromadb import Documents, EmbeddingFunction, Embeddings
 from chromadb.utils.embedding_functions import DefaultEmbeddingFunction
 from pypdf import PdfReader
+from azure.storage.blob import BlobServiceClient
 
 
 class LocalEmbeddingFunction(EmbeddingFunction):
@@ -24,8 +25,19 @@ class RAGPipeline:
         self.groq_api_key = (groq_api_key or "").strip() or None
         self.db_path = db_path
 
-        os.makedirs(db_path, exist_ok=True)
+        # Azure Storage Setup (Fail Fast)
+        self.storage_account_name = os.getenv("STORAGE_ACCOUNT_NAME")
+        self.storage_account_key = os.getenv("STORAGE_ACCOUNT_KEY")
+        self.container_name = os.getenv("STORAGE_CONTAINER_NAME", "organistation-docs")
 
+        if not self.storage_account_name or not self.storage_account_key:
+            raise ValueError("CRITICAL ERROR: STORAGE_ACCOUNT_NAME or STORAGE_ACCOUNT_KEY is mission from environment.")
+
+        connect_str = f"DefaultEndpointsProtocol=https;AccountName={self.storage_account_name};AccountKey={self.storage_account_key};EndpointSuffix=core.windows.net"
+        self.blob_service_client = BlobServiceClient.from_connection_string(connect_str)
+        self._ensure_container_exists()
+
+        os.makedirs(db_path, exist_ok=True)
         self.embedding_fn = LocalEmbeddingFunction()
         self.chroma_client = chromadb.PersistentClient(path=db_path)
         self.collection = self.chroma_client.get_or_create_collection(
@@ -44,6 +56,24 @@ class RAGPipeline:
             print("No GROQ_API_KEY — using local excerpt fallback for answers.")
 
         print(f"Embeddings: {self.embedding_fn.model_name} (local, no API key).")
+
+    def _ensure_container_exists(self):
+        try:
+            container_client = self.blob_service_client.get_container_client(self.container_name)
+            if not container_client.exists():
+                container_client.create_container()
+                print(f"[AI Service] Created Azure Blob container: {self.container_name}")
+        except Exception as e:
+            print(f"[AI Service] Error checking/creating container: {e}")
+
+    def _upload_to_blob(self, file_path: str, filename: str):
+        try:
+            blob_client = self.blob_service_client.get_blob_client(container=self.container_name, blob=filename)
+            with open(file_path, "rb") as data:
+                blob_client.upload_blob(data, overwrite=True)
+            print(f"[AI Service] File {filename} uploaded to Azure Blob Storage.")
+        except Exception as e:
+            print(f"[AI Service] Failed to upload to Azure: {e}")
 
     def extract_text_from_file(self, file_path: str, original_filename: str) -> str:
         ext = os.path.splitext(original_filename)[1].lower()
@@ -106,6 +136,9 @@ class RAGPipeline:
         return [c for c in chunks if len(c) > 10]
 
     def ingest_document(self, temp_file_path: str, filename: str) -> Dict[str, Any]:
+        # Perform permanent storage first
+        self._upload_to_blob(temp_file_path, filename)
+
         raw_text = self.extract_text_from_file(temp_file_path, filename)
         if not raw_text:
             raise ValueError("No extractable text found in this document.")
@@ -155,8 +188,32 @@ class RAGPipeline:
         docs = self.collection.get(where={"doc_hash": doc_hash})
         if not docs or not docs["ids"]:
             return False
+        
+        # Try to delete original file from Blob Storage if we can find the filename
+        try:
+            filename = docs["metadatas"][0]["filename"]
+            blob_client = self.blob_service_client.get_blob_client(container=self.container_name, blob=filename)
+            blob_client.delete_blob()
+            print(f"[AI Service] Deleted {filename} from Azure Blob Storage.")
+        except Exception as e:
+            print(f"[AI Service] Could not delete blob for {doc_hash}: {e}")
+
         self.collection.delete(where={"doc_hash": doc_hash})
         return True
+
+    def get_document_stream(self, doc_hash: str) -> tuple[str, bytes]:
+        """Retrieve original file binary from Azure Blob Storage."""
+        docs = self.collection.get(where={"doc_hash": doc_hash})
+        if not docs or not docs["ids"]:
+            raise ValueError("Document not found in vector store.")
+
+        filename = docs["metadatas"][0]["filename"]
+        try:
+            blob_client = self.blob_service_client.get_blob_client(container=self.container_name, blob=filename)
+            content = blob_client.download_blob().readall()
+            return filename, content
+        except Exception as e:
+            raise RuntimeError(f"Failed to download blob {filename}: {str(e)}")
 
     def reset_database(self):
         self.chroma_client.delete_collection("rag_documents")

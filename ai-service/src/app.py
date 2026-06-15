@@ -119,6 +119,33 @@ def query_documents(request: QueryRequest):
         raise HTTPException(status_code=500, detail=f"Query execution failed: {str(e)}")
 
 
+@app.get("/api/documents/{doc_hash}/view")
+@app.get("/documents/{doc_hash}/view")
+def view_document(doc_hash: str):
+    """Fetch the original document from Azure and serve it to the browser."""
+    try:
+        filename, content = rag_pipeline.get_document_stream(doc_hash)
+        
+        # Determine content type
+        content_type = "application/octet-stream"
+        if filename.lower().endswith(".pdf"): content_type = "application/pdf"
+        elif filename.lower().endswith(".txt"): content_type = "text/plain"
+        elif filename.lower().endswith(".md"): content_type = "text/markdown"
+
+        from fastapi import Response
+        return Response(
+            content=content,
+            media_type=content_type,
+            headers={
+                "Content-Disposition": f"inline; filename={filename}"
+            }
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=404, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve document: {str(e)}")
+
+
 @app.delete("/api/documents/{doc_hash}")
 @app.delete("/documents/{doc_hash}")
 def delete_document(doc_hash: str, _: None = Depends(require_ai_admin)):

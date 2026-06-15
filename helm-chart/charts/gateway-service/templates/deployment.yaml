@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "gateway-service.fullname" . }}
+  labels:
+    {{- include "gateway-service.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "gateway-service.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "gateway-service.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.global.azure.registryServer }}/{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-app-secrets
+                  key: JWT_SECRET
+            # Internal URLs mapping to K8s Service Names
+            - name: AUTH_SERVICE_URL
+              value: "http://{{ .Release.Name }}-auth-service:8001"
+            - name: AI_SERVICE_URL
+              value: "http://{{ .Release.Name }}-ai-service:8000"
+            - name: HR_SERVICE_URL
+              value: "http://{{ .Release.Name }}-hr-service:8002"
+            - name: PROJECT_SERVICE_URL
+              value: "http://{{ .Release.Name }}-project-service:8003"
+            - name: FINANCE_SERVICE_URL
+              value: "http://{{ .Release.Name }}-finance-service:8004"
+          volumeMounts:
+            - name: secrets-store-inline
+              mountPath: "/mnt/secrets-store"
+              readOnly: true
+      volumes:
+        - name: secrets-store-inline
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: "{{ .Release.Name }}-vault-secrets"

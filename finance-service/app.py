@@ -15,7 +15,9 @@ MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
 DB_NAME     = os.getenv("DB_NAME", "organistation_finance")
 PORT        = int(os.getenv("PORT", "8004"))
 HOST        = os.getenv("HOST", "0.0.0.0")
-INTERNAL_SERVICE_SECRET = os.getenv("INTERNAL_SERVICE_SECRET", "organistation_internal_secret")
+INTERNAL_SERVICE_SECRET = os.getenv("INTERNAL_SERVICE_SECRET")
+if not INTERNAL_SERVICE_SECRET:
+    raise ValueError("CRITICAL ERROR: INTERNAL_SERVICE_SECRET is missing from environment.")
 
 client = None
 db     = None

@@ -7,7 +7,15 @@ const jwt = require('jsonwebtoken');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const JWT_SECRET = (process.env.JWT_SECRET || '').trim() || 'organistation_super_secret_key_change_in_production_2024';
+const JWT_SECRET = (process.env.JWT_SECRET || '').trim();
+if (!JWT_SECRET) {
+    console.error(`
+[FATAL] JWT_SECRET is not set in environment variables! 
+The gateway cannot start without a security key.
+Please verify your Vault / ENV configuration.
+    `);
+    process.exit(1);
+}
 
 // Enable CORS
 app.use(cors());
@@ -56,7 +64,7 @@ const authenticateToken = (req, res, next) => {
                 message: 'Invalid or expired access token.'
             });
         }
-        
+
         // Block API access until first-login password change
         if (decoded.must_change_password) {
             const passwordChangeAllowed = [
@@ -77,7 +85,7 @@ const authenticateToken = (req, res, next) => {
         req.headers['x-user-email'] = decoded.sub || '';
         req.headers['x-user-role'] = decoded.role || '';
         req.headers['x-user-permissions'] = JSON.stringify(decoded.permissions || []);
-        
+
         next();
     });
 };

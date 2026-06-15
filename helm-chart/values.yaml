@@ -1,0 +1,66 @@
+# Global values shared across all subcharts
+global:
+  azure:
+    tenantId: "YOUR_TENANT_ID"
+    keyvaultName: "YOUR_KEYVAULT_NAME"
+    storageAccountName: "YOUR_STORAGE_ACCOUNT"
+    identityClientId: "YOUR_USER_ASSIGNED_IDENTITY_CLIENT_ID"
+    # Container Registry
+    registryServer: "organistationacr.azurecr.io"
+  
+  # Environment (production | staging | dev)
+  env: production
+
+  # Common DB configuration
+  cosmos:
+    dbNameSuffix: "_prod"
+    # Connection string is usually pulled from Vault, but can be set here for dev
+    connectionString: ""
+
+# Individual Subchart Overrides
+auth-service:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: organistation-auth
+    tag: latest
+
+ai-service:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: organistation-ai
+    tag: latest
+  storage:
+    containerName: "organistation-docs"
+
+hr-service:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: organistation-hr
+    tag: latest
+
+finance-service:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: organistation-finance
+    tag: latest
+
+project-service:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: organistation-projects
+    tag: latest
+
+gateway-service:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: organistation-gateway
+    tag: latest
+  service:
+    type: LoadBalancer # For public access
+    port: 80
