@@ -10,19 +10,19 @@ appVersion: "1.0.0"
 dependencies:
   - name: auth-service
     version: "0.1.0"
-    repository: "file://charts/auth-service"
+    repository: ""
   - name: ai-service
     version: "0.1.0"
-    repository: "file://charts/ai-service"
+    repository: ""
   - name: hr-service
     version: "0.1.0"
-    repository: "file://charts/hr-service"
+    repository: ""
   - name: finance-service
     version: "0.1.0"
-    repository: "file://charts/finance-service"
+    repository: ""
   - name: project-service
     version: "0.1.0"
-    repository: "file://charts/project-service"
+    repository: ""
   - name: gateway-service
     version: "0.1.0"
-    repository: "file://charts/gateway-service"
+    repository: ""
