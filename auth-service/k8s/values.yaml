@@ -1,0 +1,24 @@
+name: auth-service
+replicaCount: 2
+
+rollingUpdate:
+  type: RollingUpdate
+  maxUnavailable: 1
+  maxSurge: 1
+
+image:
+  name: maheshnandi/organistation-auth
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  port: 8001
+  targetPort: 8001
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 256Mi

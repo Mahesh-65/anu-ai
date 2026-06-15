@@ -1,0 +1,8 @@
+name: gateway-service
+replicaCount: 2
+rollingUpdate: { type: RollingUpdate, maxUnavailable: 1, maxSurge: 1 }
+image: { name: maheshnandi/organistation-gateway, tag: latest, pullPolicy: IfNotPresent }
+service: { port: 80, targetPort: 3000 }
+resources:
+  limits: { cpu: 500m, memory: 512Mi }
+  requests: { cpu: 100m, memory: 256Mi }

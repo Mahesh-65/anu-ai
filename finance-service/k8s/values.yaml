@@ -1,0 +1,8 @@
+name: finance-service
+replicaCount: 1
+rollingUpdate: { type: RollingUpdate, maxUnavailable: 0, maxSurge: 1 }
+image: { name: maheshnandi/organistation-finance, tag: latest, pullPolicy: IfNotPresent }
+service: { port: 8004, targetPort: 8004 }
+resources:
+  limits: { cpu: 500m, memory: 512Mi }
+  requests: { cpu: 100m, memory: 256Mi }
