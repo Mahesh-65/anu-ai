@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: auth-service-config
+data:
+  PORT: "8001"
+  HOST: "0.0.0.0"
+  MONGODB_URI: "mongodb://mongodb-service:27017"
+  DB_NAME: "organistation_auth"
+  HR_SERVICE_URL: "http://hr-service:8002"
+  PROJECT_SERVICE_URL: "http://project-service:8003"
+  FINANCE_SERVICE_URL: "http://finance-service:8004"

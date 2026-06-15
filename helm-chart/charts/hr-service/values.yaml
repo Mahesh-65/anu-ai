@@ -1,25 +1,8 @@
-# HR Service values
 name: hr-service
 replicaCount: 1
-
-rollingUpdate:
-  type: RollingUpdate
-  maxUnavailable: 0
-  maxSurge: 1
-
-image:
-  name: organistation-hr
-  tag: latest
-  pullPolicy: IfNotPresent
-
-service:
-  port: 8002
-  targetPort: 8002
-
+rollingUpdate: { type: RollingUpdate, maxUnavailable: 0, maxSurge: 1 }
+image: { repository: organistation-hr, tag: latest, pullPolicy: IfNotPresent }
+service: { port: 8002, targetPort: 8002 }
 resources:
-  limits:
-    cpu: 500m
-    memory: 512Mi
-  requests:
-    cpu: 100m
-    memory: 256Mi
+  limits: { cpu: 500m, memory: 512Mi }
+  requests: { cpu: 100m, memory: 256Mi }

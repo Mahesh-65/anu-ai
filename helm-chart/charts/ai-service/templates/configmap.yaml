@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ai-service-config
+data:
+  PORT: "8000"
+  HOST: "0.0.0.0"
+  CHROMA_DB_PATH: "/app/chroma_db"
+  STORAGE_ACCOUNT_NAME: "organistationstorage"
+  STORAGE_CONTAINER_NAME: "organistation-docs"

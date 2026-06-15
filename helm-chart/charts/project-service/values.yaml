@@ -1,8 +1,7 @@
-# Project Service values
 name: project-service
 replicaCount: 1
 rollingUpdate: { type: RollingUpdate, maxUnavailable: 0, maxSurge: 1 }
-image: { name: organistation-projects, tag: latest, pullPolicy: IfNotPresent }
+image: { repository: organistation-projects, tag: latest, pullPolicy: IfNotPresent }
 service: { port: 8003, targetPort: 8003 }
 resources:
   limits: { cpu: 500m, memory: 512Mi }
