@@ -1,10 +1,10 @@
 # Global values shared across all subcharts
 global:
   azure:
-    tenantId: "YOUR_TENANT_ID"
+    tenantId: "d8537334-bc24-4daf-95a8-bf4c9fb14394"
     keyvaultName: "Mahesh-KeyV"
     storageAccountName: "maheshstoracc"
-    identityClientId: "YOUR_USER_ASSIGNED_IDENTITY_CLIENT_ID"
+    identityClientId: "f1341b89-0c9a-439c-9fda-81defd6d5672"
     # Container Registry
     registryServer: "organistationacr.azurecr.io"
   
