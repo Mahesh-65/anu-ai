@@ -23,14 +23,14 @@ auth-service:
   replicaCount: 2
   image:
     repository: organistation-auth
-    tag: latest
+    tag: v1.0.0
 
 ai-service:
   enabled: true
   replicaCount: 1
   image:
     repository: organistation-ai
-    tag: latest
+    tag: v1.0.0
   storage:
     containerName: "organistation-docs"
 
@@ -39,28 +39,28 @@ hr-service:
   replicaCount: 1
   image:
     repository: organistation-hr
-    tag: latest
+    tag: v1.0.0
 
 finance-service:
   enabled: true
   replicaCount: 1
   image:
     repository: organistation-finance
-    tag: latest
+    tag: v1.0.0
 
 project-service:
   enabled: true
   replicaCount: 1
   image:
     repository: organistation-projects
-    tag: latest
+    tag: v1.0.0
 
 gateway-service:
   enabled: true
   replicaCount: 2
   image:
     repository: organistation-gateway
-    tag: latest
+    tag: v1.0.0
   service:
     type: LoadBalancer # For public access
     port: 80

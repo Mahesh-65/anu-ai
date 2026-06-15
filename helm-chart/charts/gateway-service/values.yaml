@@ -1,7 +1,7 @@
 name: gateway-service
 replicaCount: 2
 rollingUpdate: { type: RollingUpdate, maxUnavailable: 1, maxSurge: 1 }
-image: { repository: organisation-gateway, tag: latest, pullPolicy: IfNotPresent }
+image: { repository: organisation-gateway, tag: v1.0.0, pullPolicy: IfNotPresent }
 service: { port: 80, targetPort: 3000 }
 resources:
   limits: { cpu: 500m, memory: 512Mi }
