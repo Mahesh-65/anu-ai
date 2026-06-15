@@ -21,6 +21,10 @@ spec:
       - name: {{ .Values.name }}
         image: "{{ .Values.global.azure.registryServer | default "" }}{{ if .Values.global.azure.registryServer }}/{{ end }}{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
+        volumeMounts:
+        - name: secrets-store-inline
+          mountPath: "/mnt/secrets-store"
+          readOnly: true
         ports:
         - containerPort: {{ .Values.service.targetPort }}
         envFrom:
@@ -46,3 +50,10 @@ spec:
             port: {{ .Values.service.targetPort }}
           initialDelaySeconds: 15
           periodSeconds: 20
+      volumes:
+      - name: secrets-store-inline
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: organization-vault-provider
