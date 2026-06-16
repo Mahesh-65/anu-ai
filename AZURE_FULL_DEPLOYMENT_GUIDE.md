@@ -1,116 +1,106 @@
-# 🚀 Full Azure Production Deployment Guide (Step-by-Step UI)
+# 🔒 Full Azure Private Deployment Guide (Hardened Network)
 
-This guide provides a comprehensive walkthrough for deploying the **OrganiStation Microservices Platform** on Azure. It includes every resource, recommended configuration settings, and post-creation steps.
-
----
-
-## 🏗️ Phase 1: Resource Group & Registry
-
-### 1. Resource Group (The Container)
-*   **Search**: "Resource groups" > **+ Create**.
-*   **Name**: `Mahesh-RG`.
-*   **Region**: `East US` (Consistency is key for latency and costs).
-*   **After Creation**: This will be your dashboard for all resources.
-
-### 2. Azure Container Registry (The Image Store)
-*   **Search**: "Container registries" > **+ Create**.
-*   **Registry name**: `organistationacr` (Unique).
-*   **SKU**: `Basic`.
-*   **Encryption**: Leave as "Service-managed key".
-*   **After Creation**: Go to **Settings > Access keys** and enable **"Admin user"**. (Useful for local testing).
+This guide provides a step-by-step walkthrough for deploying the **OrganiStation Platform** using **Private Endpoints** for all services. This configuration ensures that your data and communication never leave the Azure backbone network.
 
 ---
 
-## 📂 Phase 2: Storage & Databases
+## 🌐 Phase 0: Networking (The Foundation)
 
-### 3. Azure Storage Account (For AI Documents)
-*   **Search**: "Storage accounts" > **+ Create**.
-*   **Storage account name**: `maheshstoracc`.
-*   **Performance**: `Standard`.
-*   **Redundancy**: `Locally-redundant storage (LRS)` (Cheapest).
-*   **Advanced**: Ensure "Allow public access from individual containers" is checked if you need direct PDF streaming.
-*   **After Creation**: Go to **Data storage > Containers** and click **+ Container**. Name it `organistation-docs` with `Private` access level.
-*   **Keys**: Go to **Security + networking > Access keys**. Copy `key1` string.
+Before creating any services, you must establish a Virtual Network (VNET) to host the private endpoints.
 
-### 4. Azure Cosmos DB (The Database)
-*   **Search**: "Azure Cosmos DB" > **+ Create**.
-*   **API**: Select **"Azure Cosmos DB for MongoDB"**.
-*   **Resource Group**: `Mahesh-RG`.
-*   **Account Name**: `organistation-db`.
-*   **Capacity Mode**: `Serverless` (Best for cost control during dev/test).
-*   **After Creation**: Go to **Settings > Connection strings**. Copy the **Primary Connection String**.
+1.  **Search**: "Virtual networks" > **+ Create**.
+2.  **Name**: `Organistation-VNET`.
+3.  **IP Addresses**: 
+    *   `10.0.0.0/16` (VNET Address Space).
+4.  **Subnets**: Create three subnets:
+    *   `aks-subnet`: `10.0.1.0/24` (For your AKS nodes).
+    *   `endpoint-subnet`: `10.0.2.0/24` (For all Private Endpoints).
+5.  **Review + create** > **Create**.
 
 ---
 
-## 🔐 Phase 3: Security & Identity
+## 🏗️ Phase 1: Storage & Databases (Private)
 
-### 5. Azure Key Vault (The Secret Store)
-*   **Search**: "Key vaults" > **+ Create**.
-*   **Name**: `Mahesh-KeyV`.
-*   **Access configuration**: Select **"Azure role-based access control (RBAC)"**.
-*   **After Creation**: Go to **Settings > Secrets** and add:
-    *   `cosmos-connection-string`: (The Primary String from Step 4)
-    *   `storage-key`: (The Access Key from Step 3)
-    *   `jwt-secret`: (Create a strong random string)
-    *   `internal-secret`: (Create another strong random string)
-    *   `groq-api-key`: (Your Groq/OpenAI key)
+### 1. Azure Cosmos DB (Private)
+*   **Create**: Select MongoDB API.
+*   **Networking Tab**:
+    1.  **Connectivity method**: `Private access`.
+    2.  Click **+ Add Private Endpoint**.
+    3.  **Name**: `cosmos-pe`.
+    4.  **Subnet**: `endpoint-subnet`.
+    5.  **Private DNS Zone**: Ensure "Integrate with private DNS zone" is **Checked**.
 
-### 6. User-Assigned Managed Identity
-*   **Search**: "Managed Identities" > **+ Create**.
-*   **Name**: `Mahesh-AKS-uami`.
-*   **After Creation**: Copy the **Client ID** and **Tenant ID**.
+### 2. Azure Storage Account (Private)
+*   **Create**: Standard performance, LRS.
+*   **Networking Tab**:
+    1.  **Connectivity method**: `Disable public access and use private access`.
+    2.  Click **+ Add private endpoint**.
+    3.  **Name**: `storage-pe`.
+    4.  **Target sub-resource**: `blob`.
+    5.  **Private DNS Zone**: Integrate with `privatelink.blob.core.windows.net`.
 
 ---
 
-## ☸️ Phase 4: Kubernetes Setup
+## 🔐 Phase 2: Security & Identity
 
-### 7. Azure Kubernetes Service (AKS)
-*   **Search**: "Kubernetes services" > **+ Create**.
-*   **Cluster name**: `Mahesh-AKS`.
-*   **API Server availability**: `99.5%`.
-*   **Workload Identity**: In the **Advanced** tab, ensure **"Enable Workload Identity"** and **"OIDC issuer"** are **CHECKED**.
-*   **Azure Key Vault Secrets Provider**: In the **Integrations** tab, check **"Enable Azure Key Vault Secrets Provider"**.
-*   **After Creation**:
-    1.  **Link ACR**: Go to **Settings > Cluster configuration** and select `organistationacr`.
-    2.  **Add Identity to Nodes**: Go to the **Node Resource Group** (e.g., `MC_Mahesh-RG...`), find the **Virtual Machine Scale Set**, go to **Identity > User assigned**, and add `Mahesh-AKS-uami`.
+### 3. Azure Key Vault (Private)
+*   **Create**: RBAC based.
+*   **Networking Tab**:
+    1.  **Connectivity method**: `Private endpoint`.
+    2.  Click **+ Add private endpoint**.
+    3.  **Target sub-resource**: `vault`.
+    4.  **Private DNS Zone**: Integrate with `privatelink.vaultcore.azure.net`.
 
-### 8. Final RBAC Linking
-1.  Go to **Key Vault > Access Control (IAM) > Add role assignment**.
-2.  **Role**: `Key Vault Secrets User`.
-3.  **Assign access to**: `Managed Identity` > `Mahesh-AKS-uami`.
+### 4. Managed Identity & Azure Container Registry
+*   **Managed Identity**: Create `Mahesh-AKS-uami` as usual.
+*   **ACR (Premium Required for Private Endpoints)**:
+    1.  **SKU**: Must be **Premium** (Basic/Standard do not support private endpoints).
+    2.  **Networking Tab**: `Private access` > **+ Add private endpoint**.
+    3.  **Private DNS Zone**: `privatelink.azurecr.io`.
+
+---
+
+## ☸️ Phase 3: AKS VNET Integration
+
+### 5. Create AKS (Private Cluster)
+*   **Basics**: Standard tier.
+*   **Networking Tab**:
+    1.  **Network configuration**: `Azure CNI` (Required for VNET integration).
+    2.  **Virtual network**: Select `Organistation-VNET`.
+    3.  **Subnet**: Select `aks-subnet`.
+    4.  **Control Plane**: For maximum security, select **"Enable private cluster"**.
+        *   *Note: If you enable private cluster, you will need a Jumpbox/VM inside the VNET to run `kubectl` commands.*
+
+---
+
+## 🛠️ Phase 4: Linking & Permissions
+
+### 6. Link Identity to Nodes
+As previously described, assign `Mahesh-AKS-uami` to the **Virtual Machine Scale Set** in the node resource group.
+
+### 7. RBAC Roles
+Assign **"Key Vault Secrets User"** and **"Storage Blob Data Contributor"** to your Manage Identity for the private resources.
 
 ---
 
 ## 🚀 Phase 5: Build & Deployment
 
-### 9. Build and Push Images
-Run this locally in your CLI:
-```bash
-az acr login --name organistationacr
+### 8. Pushing Images (The Jumpbox)
+Since your ACR and AKS are now private, you cannot push/pull from a public internet connection easily. 
+1.  Create a small "Jumpbox" VM in the `Organistation-VNET`.
+2.  Install Docker/Helm on this VM.
+3.  Login and push your images from within the network.
 
-# Build your images (example for auth)
-cd auth-service
-docker build -t organistationacr.azurecr.io/organistation-auth:v1.0.0 .
-docker push organistationacr.azurecr.io/organistation-auth:v1.0.0
-# Repeat for all 6 services
-```
-
-### 10. Configure Helm
-Update `helm-chart/values.yaml`:
-*   `global.azure.tenantId`: (From Step 6)
-*   `global.azure.identityClientId`: (From Step 6)
-*   `global.azure.keyvaultName`: `Mahesh-KeyV`
-*   `global.azure.storageAccountName`: `maheshstoracc`
-
-### 11. Run the Launch
+### 9. Helm Deploy
+From your Jumpbox:
 ```bash
 cd helm-chart
-helm upgrade --install organization .
+helm upgrade --install organization . \
+  --set global.azure.tenantId="<id>" \
+  --set global.azure.identityClientId="<id>"
 ```
 
 ---
 
-## ✅ Phase 6: Verify Deployment
-1.  **Pods**: `kubectl get pods`.
-2.  **Secrets**: `kubectl get secrets` (Verify `ai-service-secret`, etc. exist).
-3.  **Public URL**: `kubectl get svc gateway-service` (Use the `EXTERNAL-IP`).
+## 📝 Important: Private DNS Zone Resolution
+Ensure all Private DNS Zones created during the process are **Linked** to the `Organistation-VNET` so your pods can resolve `maheshstoracc.privatelink.blob.core.windows.net` to its private IP.
