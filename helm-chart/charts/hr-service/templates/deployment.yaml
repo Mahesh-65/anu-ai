@@ -16,9 +16,9 @@ spec:
     metadata:
       labels:
         app: {{ .Values.name }}
-        azure.workload.identity/use: "true"
+
     spec:
-      serviceAccountName: organistation-sa
+
       containers:
       - name: {{ .Values.name }}
         image: "{{ .Values.global.azure.registryServer | default "" }}{{ if .Values.global.azure.registryServer }}/{{ end }}{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
@@ -58,4 +58,4 @@ spec:
           driver: secrets-store.csi.k8s.io
           readOnly: true
           volumeAttributes:
-            secretProviderClass: organization-vault-provider
+            secretProviderClass: organistation-vault-provider
